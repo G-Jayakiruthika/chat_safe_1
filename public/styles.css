@@ -57,6 +57,7 @@ body {
 .bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
 .skip { position: absolute; inset-inline-start: 0; top: 0; transform: translateY(-120%); background: var(--focus); color: #000; padding: .5rem 1rem; z-index: 10; }
 .skip:focus { transform: none; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
@@ -854,14 +855,16 @@ body.notes-off #sf-tip { display: none !important; }
 
 /* --- 60-Second Interactive Video Explainer (Hero Top Video) --- */
 .video-player { position: relative; border-radius: 20px; overflow: hidden; padding: .75rem; background: #070b14; border: 1px solid var(--border); width: 100%; max-width: 1080px; margin-inline: auto; box-shadow: var(--shadow); }
-.video-player canvas { width: 100%; height: auto; display: block; border-radius: 14px; }
+.video-player canvas { width: 100%; height: auto; display: block; border-radius: 14px; cursor: pointer; }
 .player-caption { margin-top: .55rem; padding: .55rem .85rem; border-radius: 10px; background: rgb(15 23 42 / .88); color: #e2e8f0; font-size: .92rem; min-height: 2.4rem; }
 .player-big-play {
-  position: absolute; left: 50%; top: 43%; transform: translate(-50%, -50%);
-  width: 72px; height: 72px; border-radius: 50%; font-size: 1.6rem;
+  position: absolute; left: 50%; top: 41%; transform: translate(-50%, -50%); z-index: 4;
+  width: 72px; height: 72px; padding: 0; border-radius: 50%; font-size: 1.6rem;
   background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--accent-ink); box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .player-controls { display: flex; align-items: center; gap: .6rem; margin-top: .55rem; }
+.player-controls .icon-btn { color: #eef4ff; border-color: rgb(255 255 255 / .22); width: 40px; height: 40px; min-height: 40px; flex: 0 0 auto; }
+[data-theme="light"] .player-controls .icon-btn { color: #0f172a; border-color: var(--border); }
 .player-track { position: relative; flex: 1; height: 10px; border-radius: 99px; background: rgb(255 255 255 / .14); cursor: pointer; overflow: hidden; }
 .player-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
 .player-chapters span { position: absolute; top: 0; bottom: 0; width: 2px; background: rgb(255 255 255 / .5); }

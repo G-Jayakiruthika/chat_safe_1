@@ -59,8 +59,15 @@
       ctx.fillText(s, x, y);
     };
 
+    function chapterIndexAt(time) {
+      for (let i = CHAPTERS.length - 1; i >= 0; i--) {
+        if (time >= CHAPTERS[i].t) return i;
+      }
+      return 0;
+    }
+
     function drawBus(time) {
-      const idx = CHAPTERS.findLastIndex((c) => time >= c.t);
+      const idx = chapterIndexAt(time);
       const active = [[0, 2], [0, 1, 2, 3], [1, 3, 4], [3, 4, 6], [3, 4, 5], [3, 4, 7]][Math.max(0, idx)];
       const y = 48;
       const x0 = 150;
@@ -113,7 +120,7 @@
 
       drawBus(time);
 
-      const chIdx = Math.max(0, CHAPTERS.findLastIndex((c) => time >= c.t));
+      const chIdx = chapterIndexAt(time);
       const ch = CHAPTERS[chIdx];
       text(`0${chIdx + 1} / 0${CHAPTERS.length}  ·  ${ch.name.toUpperCase()}`, 60, 134, 14, C.cyan, 700, 'left', true);
 
@@ -302,31 +309,53 @@
       }
     }
 
+    let rafId = null;
+
     function setPlaying(v) {
-      playing = v;
-      if (playBtn) playBtn.textContent = v ? '⏸' : '▶';
-      if (bigBtn) bigBtn.hidden = v;
-      if (v) {
+      playing = Boolean(v);
+      if (playBtn) {
+        playBtn.textContent = playing ? '⏸' : '▶';
+        playBtn.setAttribute('aria-pressed', String(playing));
+      }
+      if (bigBtn) {
+        bigBtn.hidden = playing;
+        bigBtn.style.display = playing ? 'none' : '';
+      }
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      if (playing) {
         last = performance.now();
-        requestAnimationFrame(tick);
+        rafId = requestAnimationFrame(tick);
+      } else {
+        draw(t);
       }
     }
 
     function tick(now) {
       if (!playing) return;
-      const dt = Math.min(0.05, (now - last) / 1000);
+      const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
       last = now;
       t += dt;
       if (t >= DUR) {
         t = 0;
         setPlaying(false);
+        return;
       }
       draw(t);
-      if (playing) requestAnimationFrame(tick);
+      rafId = requestAnimationFrame(tick);
     }
 
-    playBtn?.addEventListener('click', () => setPlaying(!playing));
-    bigBtn?.addEventListener('click', () => setPlaying(true));
+    playBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPlaying(!playing);
+    });
+    bigBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setPlaying(!playing);
+    });
+    canvas.addEventListener('click', () => setPlaying(!playing));
     track?.addEventListener('click', (e) => {
       const r = track.getBoundingClientRect();
       t = Math.max(0, Math.min(DUR, ((e.clientX - r.left) / r.width) * DUR));
