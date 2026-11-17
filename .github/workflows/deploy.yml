@@ -78,7 +78,7 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@v3
       - name: Build & push image
         run: |
           gcloud builds submit --tag "$REGION-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/truesafe/api:${{ github.sha }}" .
