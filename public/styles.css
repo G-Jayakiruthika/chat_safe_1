@@ -894,3 +894,27 @@ body.notes-off #sf-tip { display: none !important; }
 .demo-verdict-box.scam { border-color: var(--critical); }
 .demo-verdict-box.civic { border-color: #3b82f6; }
 .demo-step-nav { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding-top: .4rem; border-top: 1px solid var(--border); }
+
+/* --- Google Maps & Safe Browsing Status Widgets --- */
+.hidden { display: none !important; }
+.api-status-widget {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .45rem;
+  margin-top: .65rem; padding: .55rem .85rem; border-radius: 12px;
+  font-size: .88rem; line-height: 1.4;
+  background: var(--glass); border: 1px solid var(--border);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+}
+.api-status-widget.civic {
+  background: rgb(59 130 246 / .12);
+  border-color: rgb(59 130 246 / .42);
+}
+.api-status-widget.safe {
+  background: rgb(16 185 129 / .12);
+  border-color: rgb(16 185 129 / .42);
+}
+.api-status-widget.danger {
+  background: rgb(239 68 68 / .16);
+  border-color: rgb(239 68 68 / .55);
+  color: #fecaca;
+}
+[data-theme="light"] .api-status-widget.danger { color: #7f1d1d; }

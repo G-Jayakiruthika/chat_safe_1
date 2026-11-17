@@ -107,26 +107,33 @@
         boxShadow: '0 24px 64px rgba(0, 0, 0, 0.45)',
         color: 'var(--ink, #eef4ff)', display: 'grid', gap: '.85rem',
       });
+      const currentMaps = getSessionKey('GOOGLE_MAPS_KEY') || getSessionKey('GOOGLE_MAPS_API_KEY');
+      const currentSafeBrowsing = getSessionKey('SAFE_BROWSING_KEY') || getSessionKey('SAFE_BROWSING_API_KEY');
       card.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem">
-          <h2 id="byokModalTitle" style="margin:0;font-size:1.15rem">🔐 Edge AI Mode (BYOK)</h2>
+          <h2 id="byokModalTitle" style="margin:0;font-size:1.15rem">🔐 Multi-API Edge Key Setup (BYOK)</h2>
           <button type="button" id="byokCloseBtn" aria-label="Close modal" style="background:transparent;border:0;color:inherit;font-size:1.25rem;cursor:pointer">✕</button>
         </div>
-        <p style="margin:0;font-size:.92rem;line-height:1.5;color:var(--muted, #b8c7e0)">
-          ${promptText} Your key is saved strictly in this tab's <code>sessionStorage.gemini_key</code>.
+        <p style="margin:0;font-size:.9rem;line-height:1.5;color:var(--muted, #b8c7e0)">
+          ${promptText} Keys are kept strictly in <code>sessionStorage</code> for this browser session.
         </p>
-        <label style="display:grid;gap:.35rem;font-size:.86rem;font-weight:600">
-          Gemini API Key (gemini_key)
+        <label style="display:grid;gap:.3rem;font-size:.84rem;font-weight:600">
+          GEMINI_API_KEY (Required for AI Intent)
           <input id="byokGeminiInput" type="password" autocomplete="off" placeholder="AIza..." value="${currentGemini.replace(/"/g, '&quot;')}"
-            style="padding:.7rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.35));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
+            style="padding:.65rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.35));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
         </label>
-        <label style="display:grid;gap:.35rem;font-size:.82rem;color:var(--muted, #b8c7e0)">
-          Google Maps API Key (Optional — for live Street Geocoding)
-          <input id="byokMapsInput" type="password" autocomplete="off" placeholder="AIza... (optional)" value="${getSessionKey('GOOGLE_MAPS_API_KEY').replace(/"/g, '&quot;')}"
-            style="padding:.62rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.25));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
+        <label style="display:grid;gap:.3rem;font-size:.82rem;color:var(--muted, #b8c7e0)">
+          GOOGLE_MAPS_KEY (Optional for Urimai PDF Street Address)
+          <input id="byokMapsInput" type="password" autocomplete="off" placeholder="AIza... (optional — falls back cleanly)" value="${currentMaps.replace(/"/g, '&quot;')}"
+            style="padding:.6rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.25));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
+        </label>
+        <label style="display:grid;gap:.3rem;font-size:.82rem;color:var(--muted, #b8c7e0)">
+          SAFE_BROWSING_KEY (Optional for Kavach URL Scan)
+          <input id="byokSafeBrowsingInput" type="password" autocomplete="off" placeholder="AIza... (optional — falls back cleanly)" value="${currentSafeBrowsing.replace(/"/g, '&quot;')}"
+            style="padding:.6rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.25));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
         </label>
         <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.25rem">
-          <button type="submit" class="primary" style="flex:1;min-width:190px">Save Key &amp; Run Edge AI</button>
+          <button type="submit" class="primary" style="flex:1;min-width:190px">Save Keys &amp; Run Edge AI</button>
           <button type="button" id="byokOfflineBtn" class="secondary">Use Local Rule Engine</button>
         </div>
       `;
@@ -142,8 +149,12 @@
         e.preventDefault();
         const gKey = $('byokGeminiInput').value.trim();
         const mKey = $('byokMapsInput').value.trim();
+        const sbKey = $('byokSafeBrowsingInput').value.trim();
         setGeminiSessionKey(gKey);
+        setSessionKey('GOOGLE_MAPS_KEY', mKey);
         setSessionKey('GOOGLE_MAPS_API_KEY', mKey);
+        setSessionKey('SAFE_BROWSING_KEY', sbKey);
+        setSessionKey('SAFE_BROWSING_API_KEY', sbKey);
         setSessionKey('BYOK_DISMISSED', gKey ? '' : '1');
         API.setGeminiKey?.(gKey);
         if (gKey) setConnectionStatus('byok');
@@ -260,22 +271,44 @@
   }
 
   /* =========================================================================
-   * PHASE 3: THEME SWITCHING & GOOGLE MAPS REVERSE GEOCODING (CIVIC -> URIMAI)
+   * PHASE 3: GOOGLE MAPS GEOLOCATION, SAFE BROWSING API & THEME STATE MANAGEMENT
    * ========================================================================= */
   function switchIntentPalette(intent, score = 0) {
-    const targetPalette = intent === 'CIVIC'
-      ? 'bluedragon'
-      : (intent === 'SCAM' || score >= 50)
-        ? 'lionfish'
-        : null;
+    const isCivic = intent === 'CIVIC';
+    const isScam = !isCivic && (intent === 'SCAM' || score >= 50);
+    document.body.classList.toggle('civic-theme', isCivic);
+    document.body.classList.toggle('scam-theme', isScam);
+    const targetPalette = isCivic ? 'bluedragon' : isScam ? 'lionfish' : null;
     if (!targetPalette) return;
     if (window.ChatSafeTheme?.set) window.ChatSafeTheme.set('palette', targetPalette);
     else document.documentElement.dataset.palette = targetPalette;
     kavach.setDark(isDark());
   }
 
-  async function resolveCivicAddress(lat, lng) {
-    const mapsKey = getSessionKey('GOOGLE_MAPS_API_KEY');
+  /**
+   * Acquires browser GPS coordinates and resolves a formatted street address via
+   * Google Maps Reverse Geocoding API (or Cloud Run / simulated demo ward fallback).
+   */
+  async function getGoogleMapsLocation() {
+    const fallbackAddress = 'Location: Simulated Ward 12, Coimbatore, Tamil Nadu';
+    if (!navigator.geolocation) {
+      return { address: fallbackAddress, source: 'simulated-ward' };
+    }
+
+    const position = await new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve(null),
+        { timeout: 3500, maximumAge: 60_000 },
+      );
+    });
+
+    if (!position) {
+      return { address: fallbackAddress, source: 'simulated-ward' };
+    }
+
+    const { lat, lng } = position;
+    const mapsKey = getSessionKey('GOOGLE_MAPS_KEY') || getSessionKey('GOOGLE_MAPS_API_KEY');
     if (mapsKey) {
       try {
         const geoRes = await fetch(
@@ -284,45 +317,83 @@
         if (geoRes.ok) {
           const geoJson = await geoRes.json();
           const addr = geoJson?.results?.[0]?.formatted_address;
-          if (addr) return addr;
+          if (addr) return { address: addr, coords: { lat, lng }, source: 'google-maps-api' };
         }
       } catch {
-        toast('Network offline - switching to local coordinate label');
+        /* graceful fallback below */
       }
     }
+
     try {
       const serverGeo = await API.call('reverse-geocode', { lat, lng });
-      if (serverGeo?.address) return serverGeo.address;
+      if (serverGeo?.address) {
+        return { address: serverGeo.address, coords: { lat, lng }, source: serverGeo.source || 'server-geocode' };
+      }
     } catch {
-      /* fallback cleanly to raw coordinates */
+      /* fallback cleanly to coordinates */
     }
-    return `Lat ${Number(lat).toFixed(4)}, Lng ${Number(lng).toFixed(4)} (Local Municipal Ward)`;
+
+    return {
+      address: `Lat ${lat.toFixed(4)}, Lng ${lng.toFixed(4)} — Simulated Ward 12`,
+      coords: { lat, lng },
+      source: 'gps-coords-fallback',
+    };
   }
 
-  function enrichCivicLocation(kit, aiDetails = '') {
-    if (!kit || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const streetAddress = await resolveCivicAddress(pos.coords.latitude, pos.coords.longitude);
-          if (!streetAddress) return;
-          kit.location = streetAddress;
-          if (aiDetails && !kit.summary.includes(aiDetails)) kit.summary = aiDetails;
-          if ($('geoStatus')) $('geoStatus').textContent = `📍 GPS Street Address: ${streetAddress}`;
-          if (activeUrimaiKit === kit) {
-            $('usSummary').textContent = `${kit.summary} — ${streetAddress}`;
-            $('fhKitTitle').textContent = `${kit.summary} — ${streetAddress}`;
-            if ($('portalCopyArea')) {
-              $('portalCopyArea').value = `[${kit.department}] Location: ${streetAddress}. Grievance: ${kit.summary || kit.originalText} (Ref: ${kit.kitId})`;
-            }
+  const URL_DETECT_REGEX = /\b(?:https?:\/\/|www\.)[^\s<>"')]+|\b(?:bit\.ly|tinyurl\.com|t\.me|wa\.me|rb\.gy|cutt\.ly)\/[^\s<>"')]+/gi;
+
+  function extractUrlsFromText(text) {
+    const raw = String(text || '');
+    const found = [...raw.matchAll(URL_DETECT_REGEX)].map((m) => {
+      const u = m[0].replace(/[.,;:!?]+$/, '');
+      return u.startsWith('http') ? u : `https://${u}`;
+    });
+    return [...new Set(found)].slice(0, 10);
+  }
+
+  /**
+   * Checks extracted URLs against Google Safe Browsing API v4 when SAFE_BROWSING_KEY
+   * is stored in sessionStorage, with graceful fallback to /api/safebrowsing & local heuristics.
+   */
+  async function checkSafeBrowsing(urlOrList) {
+    const urls = (Array.isArray(urlOrList) ? urlOrList : [urlOrList]).filter(Boolean);
+    if (!urls.length) return { safe: true, matches: [], urls: [], source: 'none' };
+
+    const sbKey = getSessionKey('SAFE_BROWSING_KEY') || getSessionKey('SAFE_BROWSING_API_KEY');
+    if (sbKey) {
+      try {
+        const res = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${encodeURIComponent(sbKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client: { clientId: 'chatsafe-urimai', clientVersion: '3.0.0' },
+            threatInfo: {
+              threatTypes: ['MALWARE', 'SOCIAL_ENGINEERING', 'UNWANTED_SOFTWARE', 'POTENTIALLY_HARMFUL_APPLICATION'],
+              platformTypes: ['ANY_PLATFORM'],
+              threatEntryTypes: ['URL'],
+              threatEntries: urls.map((url) => ({ url })),
+            },
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const apiMatches = Array.isArray(data.matches)
+            ? data.matches.map((m) => ({ url: m.threat?.url || urls[0], threatType: m.threatType || 'MALICIOUS_URL' }))
+            : [];
+          if (apiMatches.length > 0) {
+            return { safe: false, matches: apiMatches, urls, source: 'google-safebrowsing-api' };
           }
-        } catch {
-          /* non-fatal fallback: keep Ward default */
         }
-      },
-      () => { /* permission declined or unavailable; keep default location */ },
-      { timeout: 3500, maximumAge: 60_000 },
-    );
+      } catch {
+        /* fall through to server/offline heuristic check */
+      }
+    }
+
+    try {
+      return await API.call('safebrowsing', { urls });
+    } catch {
+      return { safe: true, matches: [], urls, source: 'offline-fallback' };
+    }
   }
   function setAgentState(state) {
     kavach.setState(state);
@@ -495,7 +566,12 @@
         Sound.play('civic');
         addAgentMessage('Kavach × Urimai', 'kavach', `${res.reply}\n\n⚖️ Action Kit ${res.urimaiKit.kitId} dispatched to Family Hub!`);
         dispatchUrimaiKitToFamily(res.urimaiKit);
-        enrichCivicLocation(res.urimaiKit);
+        getGoogleMapsLocation().then((geo) => {
+          if (!geo?.address) return;
+          res.urimaiKit.location = geo.address;
+          if ($('fhKitTitle')) $('fhKitTitle').textContent = `${res.urimaiKit.summary} — ${geo.address}`;
+          if ($('geoStatus')) $('geoStatus').textContent = `📍 Google Maps Location: ${geo.address}`;
+        }).catch(() => {});
       } else if (res.mode === 'scan' && res.analysis) {
         pulseBus(['vani', 'gemini', 'kavach', 'netra']);
         switchIntentPalette(res.analysis.intent, res.analysis.score);
@@ -765,7 +841,23 @@
     Sound.play('scan');
 
     try {
-      // Dual-Mode Call: tries Cloud Run (/api/analyze) first, falls back to Edge BYOK Gemini, then local rules
+      const sbWidget = $('safebrowsing-widget');
+      const sbStatus = $('url-threat-status');
+      const mapsBadge = $('maps-status-badge');
+      const detectedAddrEl = $('detected-address');
+      sbWidget?.classList.add('hidden');
+      mapsBadge?.classList.add('hidden');
+
+      // 1) Detect URLs in input & run Google Safe Browsing / Heuristic URL Check
+      const detectedUrls = extractUrlsFromText(clean);
+      let sbResult = null;
+      if (detectedUrls.length) {
+        sbWidget?.classList.remove('hidden', 'danger', 'safe');
+        if (sbStatus) sbStatus.textContent = `Scanning ${detectedUrls.length} link(s)...`;
+        sbResult = await checkSafeBrowsing(detectedUrls);
+      }
+
+      // 2) Dual-Mode Gemini Intent Routing (Cloud Run /api/analyze -> Edge BYOK fallback -> Local rules)
       const routed = await analyzeIntent(clean);
       const isCloud = routed?._source === 'cloud-run';
       const isEdgeByok = routed?._source === 'edge-byok';
@@ -803,6 +895,19 @@
         res.engine = `🟢 Live: Cloud Run Server (${res.engine || 'Node.js'})`;
       }
 
+      // 3) Override Risk Score to 100 & Force Furious Red if Safe Browsing flags a malicious URL
+      const flaggedUrls = sbResult && !sbResult.safe && sbResult.matches?.length ? sbResult.matches : [];
+      if (flaggedUrls.length > 0) {
+        res.intent = 'SCAM';
+        res.score = 100;
+        res.risk_score = 100;
+        res.level = 'critical';
+        res.verdict = `CRITICAL THREAT: Malicious URL Blocked (${flaggedUrls[0].url})`;
+        if (!res.complaint) {
+          res.complaint = `NATIONAL CYBER CRIME REPORTING PORTAL (https://cybercrime.gov.in | Helpline 1930)\nMalicious Link Detected (${flaggedUrls.map((m) => m.url).join(', ')}): ${clean}`;
+        }
+      }
+
       lastResult = res;
       $('scanBox').classList.remove('scanning');
 
@@ -818,6 +923,7 @@
       const degraded = Boolean(aiOffline || res._fallbackReason || res.aiError);
       if (aiOffline) toast(offlineFallbackMsg);
 
+      // Branch A: URIMAI CIVIC (Blue Theme + Await Google Maps Geolocation + PDF Location Injection)
       if (res.intent === 'CIVIC' && res.urimaiKit) {
         pulseBus(['gemini', 'urimai', 'setu']);
         switchIntentPalette('CIVIC', 0);
@@ -826,26 +932,36 @@
         $('xrayStatus').textContent = degraded
           ? offlineFallbackMsg
           : `Civic Grievance routed to Urimai Engine (${res.engine})`;
+        $('urimaiScanResult').hidden = false;
+        mapsBadge?.classList.remove('hidden');
+        if (detectedAddrEl) detectedAddrEl.textContent = 'Acquiring precise location...';
+
+        const geo = await getGoogleMapsLocation();
+        const streetAddress = geo.address;
+        res.urimaiKit.location = streetAddress;
+        if (isEdgeByok && routed.details) res.urimaiKit.summary = routed.details;
+
+        if (detectedAddrEl) detectedAddrEl.textContent = streetAddress;
+        if ($('geoStatus')) $('geoStatus').textContent = `📍 Google Maps Location: ${streetAddress}`;
         $('usDept').textContent = res.urimaiKit.department;
-        $('usSummary').textContent = (isEdgeByok && routed.details) ? routed.details : res.urimaiKit.summary;
-        $('usEngLetter').textContent = res.urimaiKit.englishLetter;
+        $('usSummary').textContent = `${res.urimaiKit.summary} — ${streetAddress}`;
+        $('usEngLetter').textContent = res.urimaiKit.englishLetter.replace(/Ward 12[^,\n]*/i, streetAddress);
         $('usRegTitle').textContent = `${res.urimaiKit.langName} (${res.urimaiKit.langNative}) Draft`;
         $('usRegLetter').textContent = res.urimaiKit.regionalLetter;
-        $('urimaiScanResult').hidden = false;
         activeUrimaiKit = res.urimaiKit;
-        enrichCivicLocation(res.urimaiKit, isEdgeByok ? routed.details : '');
         return;
       }
 
-      // Scam / Safe Result
+      // Branch B: KAVACH SCAM / SAFE (Red Theme + Furious Red on Match + 1930 Draft)
       pulseBus(['gemini', 'kavach', 'netra', 'payguard']);
       switchIntentPalette(res.intent, res.score);
-      setMood(degraded ? 'suspicious' : res.level);
+      setMood(flaggedUrls.length ? 'critical' : degraded ? 'suspicious' : res.level);
       Sound.play(res.score >= 50 ? 'alert' : 'safe');
       $('xrayStatus').textContent = degraded ? offlineFallbackMsg : '';
       $('result').className = `result lvl-${res.level}`;
       $('result').hidden = false;
       $('gauge').className = `gauge lvl-${res.level}`;
+      $('gauge').setAttribute('aria-valuenow', String(res.score));
       $('gauge').style.setProperty('--pct', res.score);
       $('scoreText').textContent = res.score;
       $('levelText').className = `level lvl-${res.level}`;
@@ -853,11 +969,18 @@
       $('verdict').textContent = res.verdict;
       $('scamType').textContent = res.scamType;
       $('explanation').textContent = res.explanation || res.details || '';
+
       const flags = [...(res.redFlags || [])];
-      if (res.indicators?.urls?.length) {
-        const sb = await API.call('safebrowsing', { urls: res.indicators.urls }).catch(() => null);
-        if (sb && !sb.safe && sb.matches?.length) {
-          flags.unshift(`Safe Browsing Alert (${sb.source}): ${sb.matches.map((m) => `${m.url} [${m.threatType}]`).join(', ')}`);
+      if (detectedUrls.length && sbWidget && sbStatus) {
+        sbWidget.classList.remove('hidden', 'danger', 'safe');
+        if (flaggedUrls.length) {
+          sbWidget.classList.add('danger');
+          const desc = flaggedUrls.map((m) => `${m.url} [${m.threatType}]`).join(', ');
+          sbStatus.textContent = `🚨 THREAT MATCHED (${sbResult.source}): ${desc}`;
+          flags.unshift(`Malicious URL flagged by Safe Browsing: ${desc}`);
+        } else {
+          sbWidget.classList.add('safe');
+          sbStatus.textContent = `✅ Checked ${detectedUrls.length} URL(s) via ${sbResult?.source || 'Safe Browsing'} — no blacklist hits.`;
         }
       }
       $('redFlags').innerHTML = flags.map((f) => `<li>${f}</li>`).join('');

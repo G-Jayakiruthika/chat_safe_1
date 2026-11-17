@@ -301,6 +301,11 @@
             <p id="scamType" class="muted" dir="auto"></p>
           </div>
         </div>
+        <div id="safebrowsing-widget" class="api-status-widget hidden" aria-live="polite">
+          <span aria-hidden="true">🛡️</span>
+          <strong>Google Safe Browsing Check:</strong>
+          <span id="url-threat-status">Scanning links...</span>
+        </div>
         <p id="explanation" dir="auto"></p>
         <button type="button" id="readAloud" class="secondary sm">🔊 Read aloud</button>
         <h4>Warning signs found</h4>
@@ -331,6 +336,11 @@
             <span class="pill blue">⚖️ URIMAI CIVIC ENGINE ACTIVATED</span>
             <h3 id="usDept" style="margin:.4rem 0 .2rem">Municipal Water Board</h3>
             <p id="usSummary" class="muted" style="margin:0"></p>
+            <div id="maps-status-badge" class="api-status-widget civic hidden" aria-live="polite">
+              <span aria-hidden="true">📍</span>
+              <strong>Google Maps Geolocation:</strong>
+              <span id="detected-address">Acquiring precise location...</span>
+            </div>
           </div>
           <div class="actions" style="margin:0">
             <button type="button" id="sendToFamilyBtn" class="primary">📲 Send to Family Hub Action Kit</button>

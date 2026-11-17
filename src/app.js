@@ -28,7 +28,7 @@ const MIME = Object.freeze({
 
 const SECURITY_HEADERS = Object.freeze({
   'Content-Security-Policy':
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://generativelanguage.googleapis.com https://maps.googleapis.com; " +
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://generativelanguage.googleapis.com https://maps.googleapis.com https://safebrowsing.googleapis.com; " +
     "media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; " +
     "frame-ancestors 'none'; object-src 'none'",
   'X-Content-Type-Options': 'nosniff',
