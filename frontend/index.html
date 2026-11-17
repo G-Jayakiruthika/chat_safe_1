@@ -7,7 +7,20 @@
     <meta name="description" content="TrueSafe: scam detection, Pay-Check and Urimai civic grievance drafting in English, Tamil and Hindi." />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
-    <title>TrueSafe – Scam shield &amp; Urimai civic helper</title>
+    <title>Chat_Safe + Urimai – Rural Voice AI &amp; Scam Shield</title>
+    <script>
+      // Single-Page Application redirect for GitHub Pages deep links
+      (function() {
+        var path = window.location.pathname;
+        var parts = path.split('/').filter(Boolean);
+        // If loaded on /<repo>/<subpath> without a hash, redirect to /<repo>/#/<subpath>
+        if (parts.length > 1 && !window.location.hash) {
+          var repo = parts[0];
+          var sub = parts.slice(1).join('/');
+          window.location.replace('/' + repo + '/#/' + sub + window.location.search);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

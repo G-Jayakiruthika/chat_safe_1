@@ -8,9 +8,13 @@ const KEY = 'truesafe:demo';
 
 export const read = () => {
   try {
-    return JSON.parse(localStorage.getItem(KEY) || '{}');
+    const data = JSON.parse(localStorage.getItem(KEY) || '{}');
+    if (data.authed === undefined) {
+      data.authed = true; // Default to authed for instant hackathon demo access
+    }
+    return data;
   } catch {
-    return {};
+    return { authed: true };
   }
 };
 
