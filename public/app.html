@@ -163,86 +163,106 @@
 
     <!-- ==================== TAB 1: RADAR & VIDEO NEWS REELS ==================== -->
     <section id="panel-radar" role="tabpanel" aria-labelledby="tab-radar" class="panel glass">
-      <div class="radar-controls">
+      <div class="radar-toolbar">
         <div>
           <p class="eyebrow" style="margin:0">TAB 1 // LOCAL THREAT &amp; CIVIC RETENTION FEED</p>
-          <h2 style="margin:.2rem 0">City Scam Radar, Civic Watch &amp; Daily Video Reels</h2>
+          <h2 style="margin:.2rem 0 .4rem">City Scam Radar, Civic Watch &amp; Verified Video Reels</h2>
         </div>
-        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-          <label for="radarCity" class="small muted">City:</label>
-          <select id="radarCity">
-            <option value="All">All India</option>
+
+        <!-- Region Filter Pills -->
+        <div class="region-pills" id="regionPills" role="group" aria-label="Filter Radar by Region">
+          <span class="small muted">📍 Region:</span>
+          <button type="button" class="region-pill active" data-city="All">All India</button>
+          <button type="button" class="region-pill" data-city="Coimbatore">Coimbatore</button>
+          <button type="button" class="region-pill" data-city="Chennai">Chennai</button>
+          <button type="button" class="region-pill" data-city="Madurai">Madurai</button>
+          <button type="button" class="region-pill" data-city="Trichy">Trichy</button>
+          <button type="button" class="region-pill" data-city="Salem">Salem</button>
+          <button type="button" class="region-pill" data-city="Bengaluru">Bengaluru</button>
+          <button type="button" class="region-pill" data-city="Mumbai">Mumbai</button>
+        </div>
+
+        <!-- Feed Mode Switcher + Redaction & Post Alert Video -->
+        <div class="feed-switcher">
+          <div class="feed-tabs" id="feedModeTabs" role="group" aria-label="Filter feed type">
+            <button type="button" class="feed-tab active" data-feed="all">All Feeds</button>
+            <button type="button" class="feed-tab" data-feed="scams">🔥 Trending Scams</button>
+            <button type="button" class="feed-tab" data-feed="civic">⚠️ Civic Watch</button>
+            <button type="button" class="feed-tab" data-feed="video">🎬 Video Reels</button>
+          </div>
+          <div class="feed-actions">
+            <button type="button" id="toggleRedaction" class="chip sm" aria-pressed="true" data-tip="Toggle Gemini PII Auto-Redaction">👁️ Gemini [REDACTED] On</button>
+            <button type="button" id="openPublisherBtn" class="button primary sm">⊕ Post Alert Video</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verified User Video Publisher Form (toggles open) -->
+      <form id="videoPublisherForm" class="publisher-box" hidden style="margin-bottom:1.1rem">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>✓ Verified Reporter Video Studio</strong>
+          <label class="small"><input type="checkbox" id="pubVerified" checked> Verified Badge ✓</label>
+        </div>
+        <input id="pubTitle" type="text" placeholder="Video headline (e.g., Fake courier call alert in RS Puram)" required>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+          <input id="pubCreator" type="text" placeholder="Your verified handle" value="Cyber Mitra Verified" required>
+          <input id="pubCategory" type="text" placeholder="Category" value="Electricity Scam" required>
+          <select id="pubCity" aria-label="City for video">
             <option value="Coimbatore">Coimbatore</option>
             <option value="Chennai">Chennai</option>
             <option value="Madurai">Madurai</option>
+            <option value="Trichy">Trichy</option>
+            <option value="Salem">Salem</option>
             <option value="Bengaluru">Bengaluru</option>
             <option value="Mumbai">Mumbai</option>
           </select>
-          <button type="button" id="toggleRedaction" class="chip" aria-pressed="true">🔒 Auto-Redaction: ON</button>
         </div>
-      </div>
-
-      <div class="radar-split">
-        <!-- Left: Live Threat Scroll + Civic Watch + Live PII Redaction Tester -->
-        <div style="display:grid;gap:1rem">
-          <div>
-            <h3 style="margin:0 0 .5rem">🔥 Live Threat Scroll (Auto-Redacted by Gemini / Netra)</h3>
-            <div id="radarScamList" class="radar-feed"></div>
-          </div>
-
-          <div>
-            <h3 style="margin:0 0 .5rem">⚠️ Civic Watch (Anonymized Urimai Issues Nearby)</h3>
-            <div id="radarCivicList" class="radar-feed"></div>
-          </div>
-
-          <div class="publisher-box">
-            <h4 style="margin:0">🔬 Live PII Auto-Redaction Tester</h4>
-            <p class="small muted" style="margin:0">Paste any raw SMS with names, phones, Aadhaar or UPI IDs to watch Netra mask personal data with <code>[REDACTED]</code> tags.</p>
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-              <input id="redactInput" type="text" placeholder="e.g., Dear Ramesh, call +91 98401 22334 or pay ramesh@ybl" style="flex:1;min-width:200px">
-              <button type="button" id="redactBtn" class="secondary sm">Redact PII</button>
-            </div>
-            <p id="redactOut" class="small" style="margin:0"></p>
-          </div>
+        <textarea id="pubSummary" rows="2" placeholder="Key takeaway / warning clue for viewers…" required></textarea>
+        <label class="small muted">Optional: Upload a real video clip (.mp4 / .webm) or leave blank for an instant animated reel:
+          <input id="pubVideoFile" type="file" accept="video/mp4,video/webm" style="margin-top:.25rem">
+        </label>
+        <div class="actions" style="margin:0">
+          <button type="submit" class="primary sm">Publish to Video Feed</button>
+          <button type="button" id="cancelPubBtn" class="secondary sm">Cancel</button>
         </div>
+      </form>
 
-        <!-- Right: Daily News Vertical Video Reels + Verified User Video Publisher -->
-        <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap">
-            <h3 style="margin:0">🎬 Daily Scam &amp; Civic Video Reels</h3>
-            <button type="button" id="openPublisherBtn" class="chip">✓ Post Verified Video</button>
-          </div>
-          <p class="small muted" style="margin:0 0 .6rem">Scroll vertically &amp; tap any reel to watch with voice narration. Verified users can post new scam alert videos.</p>
-
-          <form id="videoPublisherForm" class="publisher-box" hidden style="margin-bottom:.85rem">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <strong>✓ Verified Reporter Video Studio</strong>
-              <label class="small"><input type="checkbox" id="pubVerified" checked> Verified Badge ✓</label>
-            </div>
-            <input id="pubTitle" type="text" placeholder="Video headline (e.g., Fake courier call alert in RS Puram)" required>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem">
-              <input id="pubCreator" type="text" placeholder="Your verified handle" value="Cyber Mitra Verified" required>
-              <select id="pubCity">
-                <option value="Coimbatore">Coimbatore</option>
-                <option value="Chennai">Chennai</option>
-                <option value="Madurai">Madurai</option>
-                <option value="Bengaluru">Bengaluru</option>
-                <option value="Mumbai">Mumbai</option>
-              </select>
-            </div>
-            <textarea id="pubSummary" rows="2" placeholder="Key takeaway / warning clue for viewers…" required></textarea>
-            <label class="small muted">Optional: Upload a real video clip (.mp4 / .webm) or leave blank for an instant animated reel:
-              <input id="pubVideoFile" type="file" accept="video/mp4,video/webm" style="margin-top:.25rem">
-            </label>
-            <div class="actions" style="margin:0">
-              <button type="submit" class="primary sm">Publish to Video Feed</button>
-              <button type="button" id="cancelPubBtn" class="secondary sm">Cancel</button>
-            </div>
-          </form>
-
-          <div id="reelScroller" class="reel-scroller" aria-label="Scrollable Daily Scam Video Reels"></div>
+      <!-- 1. Verified Scam Video News & Reels (3-Column Grid matching screenshot) -->
+      <section id="radarVideoSection" class="radar-section" aria-labelledby="videoFeedHeading">
+        <div class="radar-section-head">
+          <h3 id="videoFeedHeading">📹 Verified Scam Video News &amp; Reels</h3>
+          <span class="small muted">Daily visual micro-learning</span>
         </div>
-      </div>
+        <div id="reelScroller" class="reels-grid-3" aria-label="Verified Scam Video News and Reels"></div>
+      </section>
+
+      <!-- 2. Live Scam Threat Scroll -->
+      <section id="radarScamSection" class="radar-section" aria-labelledby="scamFeedHeading">
+        <div class="radar-section-head">
+          <h3 id="scamFeedHeading">🔥 Live Scam Threat Scroll (Auto-Redacted by Gemini / Netra)</h3>
+          <span id="radarScamCount" class="small muted"></span>
+        </div>
+        <div id="radarScamList" class="radar-feed"></div>
+
+        <div class="publisher-box" style="margin-top:1rem">
+          <h4 style="margin:0">🔬 Live PII Auto-Redaction Tester</h4>
+          <p class="small muted" style="margin:0">Paste any raw SMS with names, phones, Aadhaar or UPI IDs to watch Netra mask personal data with <code>[REDACTED]</code> tags.</p>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <input id="redactInput" type="text" placeholder="e.g., Dear Ramesh, call +91 98401 22334 or pay ramesh@ybl" style="flex:1;min-width:200px">
+            <button type="button" id="redactBtn" class="secondary sm">Redact PII</button>
+          </div>
+          <p id="redactOut" class="small" style="margin:0"></p>
+        </div>
+      </section>
+
+      <!-- 3. Civic Watch -->
+      <section id="radarCivicSection" class="radar-section" aria-labelledby="civicFeedHeading">
+        <div class="radar-section-head">
+          <h3 id="civicFeedHeading">⚠️ Civic Watch (Anonymized Urimai Issues Nearby)</h3>
+          <span id="radarCivicCount" class="small muted"></span>
+        </div>
+        <div id="radarCivicList" class="radar-feed"></div>
+      </section>
     </section>
 
     <!-- ==================== TAB 2: UNIFIED AI SCANNER (KAVACH / URIMAI) ==================== -->

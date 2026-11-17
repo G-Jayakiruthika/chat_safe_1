@@ -1,9 +1,12 @@
 'use strict';
 
 /**
- * videoReels.js — Vertical Scrollable Daily News Video Reels + Verified User Video Publisher.
- * Renders animated short-form vertical reels (with Web Speech narration option) AND
- * lets verified users upload real video files (.mp4/.webm) or publish new verified scam/civic reels.
+ * videoReels.js — 3-Column Verified Scam Video News & Reels Grid + Verified User Video Publisher.
+ * Renders crisp visual reel cards with:
+ *   - Top-left category shield badge & top-right duration pill
+ *   - Illustrated animated Canvas cover & interactive scene-by-scene playback (or real uploaded <video>)
+ *   - Centered circular Play/Pause button + Voice Narration & Mute toggles
+ *   - Title, 2-line summary, ✓ Verified Creator & views footer
  */
 (() => {
   const STORAGE_KEY = 'chatsafe.userReels';
@@ -18,150 +21,107 @@
 
   function saveUserReels(list) {
     try {
-      // Only persist metadata & non-huge items cleanly
       localStorage.setItem(STORAGE_KEY, JSON.stringify(list.slice(0, 12)));
     } catch { /* ignore */ }
   }
 
-  function animateCanvasReel(canvas, reel) {
+  function wrapText(c, str, x, y, maxW, lh, maxLines = 4) {
+    const words = String(str || '').split(/\s+/);
+    let line = '';
+    let yy = y;
+    let lines = 0;
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (c.measureText(test).width > maxW && line) {
+        c.fillText(line, x, yy);
+        lines += 1;
+        if (lines >= maxLines) return;
+        line = w;
+        yy += lh;
+      } else {
+        line = test;
+      }
+    }
+    if (line) c.fillText(line, x, yy);
+  }
+
+  function drawReelVisual(canvas, reel, progress, playing, now) {
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
     const H = canvas.height;
-    let playing = false;
-    let progress = 0;
-    let raf = null;
-    let last = performance.now();
+    const t = now / 1000;
+    const accent = reel.accent || '#7c3aed';
 
-    function draw(now) {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      if (playing) {
-        progress = (progress + dt / (reel.durationSec || 15)) % 1;
-      }
+    // Cinematic dark studio backdrop with subtle glow
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#121324');
+    bg.addColorStop(0.5, '#1b1736');
+    bg.addColorStop(1, '#0c1020');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
 
-      // Dynamic gradient backdrop
-      const grad = ctx.createLinearGradient(0, 0, W, H);
-      grad.addColorStop(0, '#090d1a');
-      grad.addColorStop(0.55, '#121a2f');
-      grad.addColorStop(1, reel.accent ? `${reel.accent}33` : '#1e293b');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, H);
+    const radial = ctx.createRadialGradient(W * 0.5, H * 0.42, 10, W * 0.5, H * 0.42, W * 0.68);
+    radial.addColorStop(0, `${accent}55`);
+    radial.addColorStop(1, 'transparent');
+    ctx.fillStyle = radial;
+    ctx.fillRect(0, 0, W, H);
 
-      // Animated pulse ring
-      const t = now / 1000;
-      ctx.strokeStyle = reel.accent || '#22d3ee';
-      ctx.globalAlpha = 0.22;
-      ctx.lineWidth = 3;
+    // Decorative geometric waveform / emblem in background
+    ctx.strokeStyle = `${accent}44`;
+    ctx.lineWidth = 2;
+    for (let ring = 0; ring < 3; ring++) {
       ctx.beginPath();
-      ctx.arc(W / 2, H * 0.34, 70 + Math.sin(t * 2.4) * 14, 0, Math.PI * 2);
+      ctx.arc(W / 2, H * 0.36, 56 + ring * 26 + (playing ? Math.sin(t * 3 + ring) * 5 : 0), 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 1;
+    }
 
-      const scenes = reel.scenes || [{ badge: reel.category, headline: reel.title, body: reel.summary || '' }];
-      const idx = Math.min(scenes.length - 1, Math.floor(progress * scenes.length));
-      const sc = scenes[idx];
+    // Center visual glyph per category
+    const cat = String(reel.category || '').toLowerCase();
+    const glyph = cat.includes('electric') ? '⚡' : cat.includes('arrest') ? '⚖️' : cat.includes('voice') ? '🎙️' : cat.includes('civic') ? '🚰' : '🛡️';
+    ctx.font = '54px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(glyph, W / 2, H * 0.32);
 
-      // Category & city pill
-      ctx.fillStyle = reel.accent || '#22d3ee';
-      ctx.beginPath();
-      ctx.roundRect(24, 24, 150, 30, 15);
-      ctx.fill();
-      ctx.fillStyle = '#04111d';
-      ctx.font = 'bold 12px ui-monospace, monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(String(sc.badge || reel.category).toUpperCase().slice(0, 18), 99, 43);
+    const scenes = reel.scenes || [{ badge: reel.category, headline: reel.title, body: reel.summary || '' }];
+    const idx = Math.min(scenes.length - 1, Math.floor(progress * scenes.length));
+    const sc = scenes[idx];
 
-      // Verified badge
-      ctx.fillStyle = 'rgba(255,255,255,0.88)';
-      ctx.font = '600 12px system-ui, sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(`📍 ${reel.city}`, W - 22, 43);
-
-      // Center visual card
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
-      ctx.strokeStyle = reel.accent || '#22d3ee';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect(24, H * 0.25, W - 48, H * 0.44, 18);
-      ctx.fill();
-      ctx.stroke();
-
-      // Headline wrapped
-      ctx.fillStyle = '#f8fafc';
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 20px system-ui, sans-serif';
-      wrapText(ctx, sc.headline || reel.title, 42, H * 0.34, W - 84, 26);
-
-      ctx.fillStyle = '#cbd5e1';
-      ctx.font = '15px system-ui, sans-serif';
-      wrapText(ctx, sc.body || '', 42, H * 0.47, W - 84, 22);
-
-      // Progress bars at top (Stories/Reels style)
-      const barW = (W - 48 - (scenes.length - 1) * 6) / scenes.length;
+    // Story progress bars when playing
+    if (playing) {
+      const barW = (W - 36 - (scenes.length - 1) * 6) / scenes.length;
       for (let i = 0; i < scenes.length; i++) {
-        const bx = 24 + i * (barW + 6);
+        const bx = 18 + i * (barW + 6);
         ctx.fillStyle = 'rgba(255,255,255,0.22)';
-        ctx.fillRect(bx, 10, barW, 4);
-        const fill = i < idx ? 1 : i === idx ? (progress * scenes.length) % 1 : 0;
-        ctx.fillStyle = reel.accent || '#22d3ee';
-        ctx.fillRect(bx, 10, barW * fill, 4);
+        ctx.fillRect(bx, 10, barW, 3.5);
+        const f = i < idx ? 1 : i === idx ? (progress * scenes.length) % 1 : 0;
+        ctx.fillStyle = '#c084fc';
+        ctx.fillRect(bx, 10, barW * f, 3.5);
       }
-
-      // Play/Pause indicator
-      if (!playing) {
-        ctx.fillStyle = 'rgba(0,0,0,0.48)';
-        ctx.beginPath();
-        ctx.arc(W / 2, H * 0.8, 28, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = '22px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('▶', W / 2 + 2, H * 0.8 + 8);
-      } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.65)';
-        ctx.font = '12px ui-monospace, monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('● PLAYING REEL · TAP TO PAUSE', W / 2, H * 0.82);
-      }
-
-      if (playing) raf = requestAnimationFrame(draw);
     }
 
-    function wrapText(c, str, x, y, maxW, lh) {
-      const words = String(str).split(' ');
-      let line = '';
-      let yy = y;
-      for (const w of words) {
-        const test = line ? `${line} ${w}` : w;
-        if (c.measureText(test).width > maxW) {
-          c.fillText(line, x, yy);
-          line = w;
-          yy += lh;
-        } else {
-          line = test;
-        }
-      }
-      if (line) c.fillText(line, x, yy);
-    }
+    // Caption card inside frame
+    ctx.fillStyle = 'rgba(9, 13, 26, 0.78)';
+    ctx.strokeStyle = `${accent}99`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(18, H * 0.56, W - 36, H * 0.35, 16);
+    ctx.fill();
+    ctx.stroke();
 
-    draw(performance.now());
-    return {
-      toggle() {
-        playing = !playing;
-        last = performance.now();
-        if (playing) raf = requestAnimationFrame(draw);
-        else {
-          cancelAnimationFrame(raf);
-          draw(performance.now());
-        }
-        return playing;
-      },
-      pause() {
-        playing = false;
-        cancelAnimationFrame(raf);
-        draw(performance.now());
-      },
-    };
+    ctx.fillStyle = '#c084fc';
+    ctx.font = '700 11px ui-monospace, monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(String(sc.badge || reel.category).toUpperCase(), 32, H * 0.63);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 17px system-ui, sans-serif';
+    wrapText(ctx, sc.headline || reel.title, 32, H * 0.70, W - 64, 22, 2);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '13px system-ui, sans-serif';
+    wrapText(ctx, sc.body || reel.summary || '', 32, H * 0.82, W - 64, 18, 2);
   }
 
   function renderReelsFeed(container, baseReels, { onSpeak } = {}) {
@@ -169,65 +129,113 @@
     const all = [...loadUserReels(), ...baseReels];
     container.replaceChildren();
 
+    if (!all.length) {
+      container.innerHTML = '<p class="muted small">No video reels match this city filter yet. Try "All India" or post a verified alert video!</p>';
+      return;
+    }
+
     all.forEach((reel) => {
       const card = document.createElement('article');
-      card.className = 'reel-card glass';
+      card.className = 'reel-card-grid glass';
 
-      const mediaWrap = document.createElement('div');
-      mediaWrap.className = 'reel-media';
+      const media = document.createElement('div');
+      media.className = 'reel-thumb-wrap';
 
-      let ctrl = null;
+      let playing = false;
+      let progress = 0;
+      let raf = null;
+      let last = performance.now();
+
       if (reel.videoUrl) {
         const video = document.createElement('video');
         video.src = reel.videoUrl;
-        video.controls = true;
-        video.playsInline = true;
         video.loop = true;
+        video.playsInline = true;
         video.className = 'reel-video';
-        mediaWrap.appendChild(video);
+        media.appendChild(video);
+
+        const playBtn = document.createElement('button');
+        playBtn.type = 'button';
+        playBtn.className = 'reel-play-orb';
+        playBtn.setAttribute('aria-label', `Play or pause ${reel.title}`);
+        playBtn.textContent = '▶';
+        playBtn.addEventListener('click', () => {
+          if (video.paused) {
+            video.play().catch(() => {});
+            playBtn.textContent = '⏸';
+          } else {
+            video.pause();
+            playBtn.textContent = '▶';
+          }
+        });
+        media.appendChild(playBtn);
       } else {
         const cv = document.createElement('canvas');
         cv.width = 360;
-        cv.height = 480;
+        cv.height = 400;
         cv.className = 'reel-canvas';
-        cv.setAttribute('aria-label', `${reel.title} video reel`);
-        mediaWrap.appendChild(cv);
-        ctrl = animateCanvasReel(cv, reel);
-        cv.addEventListener('click', () => {
-          const isPlaying = ctrl.toggle();
-          if (isPlaying && onSpeak) {
-            const script = (reel.scenes || []).map((s) => `${s.headline}. ${s.body}`).join(' ');
-            onSpeak(script || reel.title);
+        cv.setAttribute('role', 'img');
+        cv.setAttribute('aria-label', `${reel.title} — ${reel.category} video reel`);
+        media.appendChild(cv);
+
+        const playBtn = document.createElement('button');
+        playBtn.type = 'button';
+        playBtn.className = 'reel-play-orb';
+        playBtn.setAttribute('aria-label', `Play or pause ${reel.title}`);
+        playBtn.textContent = '▶';
+
+        const step = (now) => {
+          const dt = Math.min(0.05, (now - last) / 1000);
+          last = now;
+          if (playing) {
+            progress = (progress + dt / (reel.durationSec || 16)) % 1;
+            drawReelVisual(cv, reel, progress, true, now);
+            raf = requestAnimationFrame(step);
+          }
+        };
+
+        playBtn.addEventListener('click', () => {
+          playing = !playing;
+          playBtn.textContent = playing ? '⏸' : '▶';
+          playBtn.classList.toggle('playing', playing);
+          if (playing) {
+            last = performance.now();
+            raf = requestAnimationFrame(step);
+            if (onSpeak) {
+              const script = (reel.scenes || []).map((s) => `${s.headline}. ${s.body}`).join(' ');
+              onSpeak(script || reel.summary || reel.title);
+            }
+          } else {
+            cancelAnimationFrame(raf);
+            drawReelVisual(cv, reel, progress, false, performance.now());
           }
         });
+
+        drawReelVisual(cv, reel, 0, false, performance.now());
+        media.appendChild(playBtn);
       }
 
-      const info = document.createElement('div');
-      info.className = 'reel-info';
-      const badgeText = reel.verified ? (reel.verifiedBadge || 'Verified Reporter ✓') : 'Community';
-      info.innerHTML = `
-        <div class="reel-creator">
-          <strong>${escapeHtml(reel.creator)}</strong>
-          <span class="verified-pill">${escapeHtml(badgeText)}</span>
-        </div>
+      // Top-left category shield pill + Top-right duration pill (matching screenshot)
+      const catBadge = document.createElement('span');
+      catBadge.className = 'reel-badge-cat';
+      catBadge.textContent = `🛡️ ${reel.category}`;
+      const durBadge = document.createElement('span');
+      durBadge.className = 'reel-badge-dur';
+      durBadge.textContent = reel.duration || '0:45';
+      media.append(catBadge, durBadge);
+
+      const body = document.createElement('div');
+      body.className = 'reel-card-body';
+      body.innerHTML = `
         <h4>${escapeHtml(reel.title)}</h4>
-        <div class="reel-actions">
-          <button type="button" class="chip reel-like">❤️ <span>${reel.likes || 1}</span></button>
-          <button type="button" class="chip reel-listen">🔊 Listen</button>
-          <span class="muted small">${escapeHtml(reel.views || 'New')} views</span>
+        <p class="small muted">${escapeHtml(reel.summary || '')}</p>
+        <div class="reel-card-foot">
+          <span class="reel-verified">✓ ${escapeHtml(reel.creator)}</span>
+          <span class="small muted">${escapeHtml(reel.views || 'New')}</span>
         </div>
       `;
 
-      info.querySelector('.reel-like').addEventListener('click', (e) => {
-        const span = e.currentTarget.querySelector('span');
-        span.textContent = String(Number(span.textContent) + 1);
-      });
-      info.querySelector('.reel-listen').addEventListener('click', () => {
-        const script = (reel.scenes || []).map((s) => `${s.headline}. ${s.body}`).join(' ');
-        onSpeak?.(script || reel.title);
-      });
-
-      card.append(mediaWrap, info);
+      card.append(media, body);
       container.appendChild(card);
     });
   }

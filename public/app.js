@@ -327,9 +327,20 @@
       .replace(/\[[A-Z_]+_REDACTED\]/g, (tag) => `<span class="redacted-tag">${tag}</span>`);
   }
 
+  let radarCity = 'All';
+  let radarFeedMode = 'all'; // 'all' | 'scams' | 'civic' | 'video'
+
+  function applyRadarFeedVisibility() {
+    $('radarVideoSection').hidden = !(radarFeedMode === 'all' || radarFeedMode === 'video');
+    $('radarScamSection').hidden = !(radarFeedMode === 'all' || radarFeedMode === 'scams');
+    $('radarCivicSection').hidden = !(radarFeedMode === 'all' || radarFeedMode === 'civic');
+  }
+
   async function renderRadar() {
-    const city = $('radarCity').value;
-    const data = await API.call('radar', { city });
+    const data = await API.call('radar', { city: radarCity });
+    $('radarScamCount').textContent = `${data.scams.length} active patterns`;
+    $('radarCivicCount').textContent = `${data.civic.length} active issues`;
+
     // Scams
     $('radarScamList').innerHTML = data.scams.map((s) => `
       <article class="radar-item scam" data-tone="scam">
@@ -380,17 +391,33 @@
       });
     });
 
-    // Daily Video Reels
+    // Daily Video Reels (3-Column Grid)
     window.ChatSafeReels?.renderReelsFeed($('reelScroller'), data.reels, {
       onSpeak: (script) => speak(script, 'en'),
     });
+    applyRadarFeedVisibility();
   }
 
-  $('radarCity').addEventListener('change', renderRadar);
+  document.querySelectorAll('#regionPills .region-pill').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      radarCity = btn.dataset.city;
+      document.querySelectorAll('#regionPills .region-pill').forEach((b) => b.classList.toggle('active', b === btn));
+      renderRadar();
+    });
+  });
+
+  document.querySelectorAll('#feedModeTabs .feed-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      radarFeedMode = btn.dataset.feed;
+      document.querySelectorAll('#feedModeTabs .feed-tab').forEach((b) => b.classList.toggle('active', b === btn));
+      applyRadarFeedVisibility();
+    });
+  });
+
   $('toggleRedaction').addEventListener('click', () => {
     redactionEnabled = !redactionEnabled;
     $('toggleRedaction').setAttribute('aria-pressed', String(redactionEnabled));
-    $('toggleRedaction').textContent = redactionEnabled ? '🔒 Auto-Redaction: ON' : '🔓 Auto-Redaction: OFF';
+    $('toggleRedaction').textContent = redactionEnabled ? '👁️ Gemini [REDACTED] On' : '👁️ Showing Raw Data';
     renderRadar();
   });
   $('redactBtn').addEventListener('click', async () => {
@@ -402,12 +429,13 @@
   });
 
   // Verified User Video Publisher
-  $('openPublisherBtn').addEventListener('click', () => { $('videoPublisherForm').hidden = false; });
+  $('openPublisherBtn').addEventListener('click', () => { $('videoPublisherForm').hidden = !$('videoPublisherForm').hidden; });
   $('cancelPubBtn').addEventListener('click', () => { $('videoPublisherForm').hidden = true; });
   $('videoPublisherForm').addEventListener('submit', (e) => {
     e.preventDefault();
     const title = $('pubTitle').value.trim();
     const creator = $('pubCreator').value.trim();
+    const category = $('pubCategory').value.trim() || 'Verified Alert';
     const city = $('pubCity').value;
     const summary = $('pubSummary').value.trim();
     const verified = $('pubVerified').checked;
@@ -419,16 +447,18 @@
       title,
       creator,
       city,
-      category: 'Verified Alert',
+      category,
+      summary,
+      duration: '0:30',
       verified,
       verifiedBadge: verified ? 'Verified User ✓' : 'Community',
       durationSec: 15,
       views: 'Just now',
       likes: 1,
-      accent: '#22d3ee',
+      accent: '#7c3aed',
       videoUrl,
       scenes: [
-        { badge: 'VERIFIED ALERT', headline: title, body: summary },
+        { badge: category, headline: title, body: summary },
         { badge: city.toUpperCase(), headline: `Posted by ${creator}`, body: 'Verified by Chat_Safe × Drishti Radar.' },
       ],
     });
