@@ -62,3 +62,23 @@ test('engine.radar returns city-filtered scams, civic watch & video reels', asyn
   assert.ok(all.civic.length >= 3);
   assert.ok(all.reels.length >= 3);
 });
+
+test('engine.analyze exposes risk_score/details/action and engine.safebrowsing flags risky URLs', async () => {
+  const engine = createEngine();
+  const scam = await engine.analyze({
+    text: 'SBI KYC blocked! Click https://bit.ly/sbi-kyc-now immediately.',
+    lang: 'en',
+  });
+  assert.equal(scam.intent, 'SCAM');
+  assert.equal(scam.risk_score, scam.score);
+  assert.ok(typeof scam.details === 'string' && scam.details.length > 0);
+  assert.ok(typeof scam.action === 'string' && scam.action.length > 0);
+
+  const risky = await engine.safebrowsing({ text: 'Visit https://bit.ly/sbi-kyc-now or http://inida-post.com/track' });
+  assert.equal(risky.safe, false);
+  assert.ok(risky.matches.length >= 1);
+
+  const clean = await engine.safebrowsing({ urls: ['https://cybercrime.gov.in'] });
+  assert.equal(clean.safe, true);
+  assert.equal(clean.matches.length, 0);
+});

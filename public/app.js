@@ -50,6 +50,41 @@
     kavach.setMood(mood);
     bg.setColor(MOOD_RGB[mood] || MOOD_RGB.idle, isDark() ? 0.6 : 0.35);
   }
+  function switchIntentPalette(intent, score = 0) {
+    const targetPalette = intent === 'CIVIC'
+      ? 'bluedragon'
+      : (intent === 'SCAM' || score >= 50)
+        ? 'lionfish'
+        : null;
+    if (!targetPalette) return;
+    if (window.ChatSafeTheme?.set) window.ChatSafeTheme.set('palette', targetPalette);
+    else document.documentElement.dataset.palette = targetPalette;
+    kavach.setDark(isDark());
+  }
+  function enrichCivicLocation(kit) {
+    if (!kit || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const geo = await API.call('reverse-geocode', {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+          if (!geo?.address) return;
+          kit.location = geo.address;
+          if ($('geoStatus')) $('geoStatus').textContent = `📍 GPS Street Match: ${geo.address}`;
+          if (activeUrimaiKit === kit) {
+            $('usSummary').textContent = `${kit.summary} (${geo.address})`;
+            $('fhKitTitle').textContent = `${kit.summary} — ${geo.address}`;
+          }
+        } catch {
+          /* non-fatal fallback: keep Ward default */
+        }
+      },
+      () => { /* permission declined or unavailable; keep default location */ },
+      { timeout: 3500, maximumAge: 60_000 },
+    );
+  }
   function setAgentState(state) {
     kavach.setState(state);
     $('agentState').textContent = t(`state_${state}`);
@@ -208,15 +243,23 @@
     try {
       const res = await API.call('agent', { text: clean, lang, turn: agentTurn++, location: 'Ward 12, Coimbatore' });
       replyLang = res.lang || uiLang();
-      setMood(res.mood || 'safe');
+      if (res._fallbackReason) {
+        setMood('suspicious');
+        toast(res._fallbackReason);
+      } else {
+        setMood(res.mood || 'safe');
+      }
 
       if (res.mode === 'urimai' && res.urimaiKit) {
         pulseBus(['vani', 'gemini', 'urimai', 'setu']);
+        switchIntentPalette('CIVIC', 0);
         Sound.play('civic');
         addAgentMessage('Kavach × Urimai', 'kavach', `${res.reply}\n\n⚖️ Action Kit ${res.urimaiKit.kitId} dispatched to Family Hub!`);
         dispatchUrimaiKitToFamily(res.urimaiKit);
+        enrichCivicLocation(res.urimaiKit);
       } else if (res.mode === 'scan' && res.analysis) {
         pulseBus(['vani', 'gemini', 'kavach', 'netra']);
+        switchIntentPalette(res.analysis.intent, res.analysis.score);
         Sound.play(res.analysis.score >= 50 ? 'alert' : 'scan');
         addAgentMessage('Kavach', `kavach lvl-${res.mood}`, res.reply);
         if (res.analysis.score >= 50) triggerFamilySos(clean, res.analysis);
@@ -228,9 +271,12 @@
       }
       if ($('autoSpeak').checked) await speak(res.reply, replyLang);
       else setAgentState('idle');
-    } catch (err) {
+    } catch {
       setAgentState('idle');
-      toast(err.message);
+      setMood('suspicious');
+      const notice = API.OFFLINE_NOTICE || 'Network unstable. Reverting to Offline Rule Engine. Please verify manually.';
+      addAgentMessage('Kavach (Offline)', 'kavach', notice);
+      toast(notice);
     }
   }
 
@@ -492,11 +538,17 @@
       });
       renderScanHistory();
 
+      const offlineFallbackMsg = API.OFFLINE_NOTICE || 'Network unstable. Reverting to Offline Rule Engine. Please verify manually.';
+      const degraded = Boolean(res._fallbackReason || res.aiError);
+
       if (res.intent === 'CIVIC' && res.urimaiKit) {
         pulseBus(['gemini', 'urimai', 'setu']);
-        setMood('civic');
+        switchIntentPalette('CIVIC', 0);
+        setMood(degraded ? 'suspicious' : 'civic');
         Sound.play('civic');
-        $('xrayStatus').textContent = `Civic Grievance routed to Urimai Engine (${res.engine})`;
+        $('xrayStatus').textContent = degraded
+          ? offlineFallbackMsg
+          : `Civic Grievance routed to Urimai Engine (${res.engine})`;
         $('usDept').textContent = res.urimaiKit.department;
         $('usSummary').textContent = res.urimaiKit.summary;
         $('usEngLetter').textContent = res.urimaiKit.englishLetter;
@@ -504,14 +556,16 @@
         $('usRegLetter').textContent = res.urimaiKit.regionalLetter;
         $('urimaiScanResult').hidden = false;
         activeUrimaiKit = res.urimaiKit;
+        enrichCivicLocation(res.urimaiKit);
         return;
       }
 
       // Scam / Safe Result
       pulseBus(['gemini', 'kavach', 'netra', 'payguard']);
-      setMood(res.level);
+      switchIntentPalette(res.intent, res.score);
+      setMood(degraded ? 'suspicious' : res.level);
       Sound.play(res.score >= 50 ? 'alert' : 'safe');
-      $('xrayStatus').textContent = '';
+      $('xrayStatus').textContent = degraded ? offlineFallbackMsg : '';
       $('result').className = `result lvl-${res.level}`;
       $('result').hidden = false;
       $('gauge').className = `gauge lvl-${res.level}`;
@@ -521,8 +575,15 @@
       $('levelText').textContent = `${res.level.toUpperCase()} (${res.score}/100)`;
       $('verdict').textContent = res.verdict;
       $('scamType').textContent = res.scamType;
-      $('explanation').textContent = res.explanation || '';
-      $('redFlags').innerHTML = (res.redFlags || []).map((f) => `<li>${f}</li>`).join('');
+      $('explanation').textContent = res.explanation || res.details || '';
+      const flags = [...(res.redFlags || [])];
+      if (res.indicators?.urls?.length) {
+        const sb = await API.call('safebrowsing', { urls: res.indicators.urls }).catch(() => null);
+        if (sb && !sb.safe && sb.matches?.length) {
+          flags.unshift(`Safe Browsing Alert (${sb.source}): ${sb.matches.map((m) => `${m.url} [${m.threatType}]`).join(', ')}`);
+        }
+      }
+      $('redFlags').innerHTML = flags.map((f) => `<li>${f}</li>`).join('');
       $('nextSteps').innerHTML = (res.nextSteps || []).map((s) => `<li>${s}</li>`).join('');
 
       if (res.upiChecks?.length) {
@@ -543,9 +604,12 @@
       }
       $('engine').textContent = `Engine: ${res.engine}`;
       for (const id of res.categoryIds || []) unlockCategory(id);
-    } catch (err) {
+    } catch {
       $('scanBox').classList.remove('scanning');
-      $('xrayStatus').textContent = err.message;
+      setMood('suspicious');
+      const notice = API.OFFLINE_NOTICE || 'Network unstable. Reverting to Offline Rule Engine. Please verify manually.';
+      $('xrayStatus').textContent = notice;
+      toast(notice);
     }
   }
 
@@ -958,7 +1022,22 @@
   $('lang').addEventListener('change', (e) => applyLanguage(e.target.value));
   (async () => {
     await API.detect();
-    $('geminiStatusPill').textContent = API.aiEnabled() ? 'Gemini 2.5 Flash Live ✓' : 'Offline Hybrid Engine Active';
+    const refreshGeminiBadge = () => {
+      $('geminiStatusPill').textContent = API.aiEnabled()
+        ? 'Gemini 2.5 Flash Live (BYOK) ✓'
+        : 'Offline Hybrid Engine (Click to Add BYOK Key)';
+    };
+    refreshGeminiBadge();
+    $('geminiStatusPill').style.cursor = 'pointer';
+    $('geminiStatusPill').title = 'Click to configure your own Gemini API key (BYOK, stored locally only)';
+    $('geminiStatusPill').addEventListener('click', () => {
+      const current = API.getGeminiKey ? API.getGeminiKey() : '';
+      const entered = window.prompt('Enter your Gemini API Key for BYOK Live Mode (leave blank to clear & use Offline Rule Engine):', current);
+      if (entered === null) return;
+      API.setGeminiKey?.(entered);
+      refreshGeminiBadge();
+      toast(entered.trim() ? 'BYOK Gemini API key saved locally in browser.' : 'Switched to Offline Rule Engine.');
+    });
     await loadLanguages();
     await renderRadar();
     await initFamilyHub();

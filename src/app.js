@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { createEngine, InputError, MAX_TEXT_CHARS } = require('./engine');
+const { createGeminiClient } = require('./gemini');
 const { createIntegrations } = require('./integrations');
 const { createLru } = require('./lru');
 const { DbError } = require('./db');
@@ -27,7 +28,7 @@ const MIME = Object.freeze({
 
 const SECURITY_HEADERS = Object.freeze({
   'Content-Security-Policy':
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; " +
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://generativelanguage.googleapis.com; " +
     "media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; " +
     "frame-ancestors 'none'; object-src 'none'",
   'X-Content-Type-Options': 'nosniff',
@@ -229,16 +230,98 @@ function createApp(deps = {}) {
       }
     }
 
-    const postRoutes = {
-      '/api/analyze': engine.analyze,
-      '/api/urimai': engine.urimai,
-      '/api/agent': engine.agent,
-      '/api/autopilot': engine.autopilot,
-      '/api/decoy': engine.decoy,
-      '/api/upi-check': engine.upiCheck,
-      '/api/redact': engine.redact,
-      '/api/radar': engine.radar,
-    };
+  async function safeBrowsingRoute(body) {
+    const base = await engine.safebrowsing(body);
+    const key = env.SAFE_BROWSING_API_KEY || '';
+    const fetchImpl = deps.fetchImpl || globalThis.fetch;
+    if (!key || !base.urls.length || typeof fetchImpl !== 'function') return base;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      const apiRes = await fetchImpl(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          client: { clientId: 'chatsafe-urimai', clientVersion: '3.0.0' },
+          threatInfo: {
+            threatTypes: ['MALWARE', 'SOCIAL_ENGINEERING', 'UNWANTED_SOFTWARE', 'POTENTIALLY_HARMFUL_APPLICATION'],
+            platformTypes: ['ANY_PLATFORM'],
+            threatEntryTypes: ['URL'],
+            threatEntries: base.urls.map((url) => ({ url })),
+          },
+        }),
+      });
+      if (!apiRes.ok) return { ...base, apiStatus: apiRes.status };
+      const data = await apiRes.json();
+      const apiMatches = Array.isArray(data.matches)
+        ? data.matches.map((m) => ({ threatType: m.threatType || 'THREAT', url: m.threat?.url || '' }))
+        : [];
+      const matches = [...apiMatches, ...base.matches];
+      return { safe: matches.length === 0, source: 'google-safebrowsing', urls: base.urls, matches, flags: base.flags };
+    } catch {
+      return { ...base, fallback: true };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function reverseGeocodeRoute(body) {
+    const lat = Number(body.lat);
+    const lng = Number(body.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      throw new InputError(400, 'Valid numeric "lat" and "lng" are required');
+    }
+    const coordsLabel = `Lat ${lat.toFixed(4)}, Lng ${lng.toFixed(4)}`;
+    const key = env.GOOGLE_MAPS_API_KEY || '';
+    const fetchImpl = deps.fetchImpl || globalThis.fetch;
+    if (!key || typeof fetchImpl !== 'function') {
+      return { address: `${coordsLabel} (Local Municipal Ward)`, coords: { lat, lng }, source: 'offline-coords' };
+    }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      const apiRes = await fetchImpl(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${encodeURIComponent(key)}`,
+        { signal: ctrl.signal },
+      );
+      if (!apiRes.ok) return { address: `${coordsLabel} (Local Municipal Ward)`, coords: { lat, lng }, source: 'offline-coords' };
+      const data = await apiRes.json();
+      const formatted = data?.results?.[0]?.formatted_address;
+      return {
+        address: formatted || `${coordsLabel} (Local Municipal Ward)`,
+        coords: { lat, lng },
+        source: formatted ? 'google-maps' : 'offline-coords',
+      };
+    } catch {
+      return { address: `${coordsLabel} (Local Municipal Ward)`, coords: { lat, lng }, source: 'offline-coords' };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  const postRoutes = {
+    '/api/analyze': (body, req) => {
+      const userKey = typeof req?.headers?.['x-gemini-key'] === 'string' ? req.headers['x-gemini-key'].trim() : '';
+      if (userKey && !engine.aiEnabled()) {
+        const byokEngine = createEngine({
+          gemini: createGeminiClient({ apiKey: userKey, model: env.GEMINI_MODEL, fetchImpl: deps.fetchImpl }),
+          logger: deps.logger,
+        });
+        return byokEngine.analyze(body);
+      }
+      return engine.analyze(body);
+    },
+    '/api/urimai': engine.urimai,
+    '/api/agent': engine.agent,
+    '/api/autopilot': engine.autopilot,
+    '/api/decoy': engine.decoy,
+    '/api/upi-check': engine.upiCheck,
+    '/api/redact': engine.redact,
+    '/api/radar': engine.radar,
+    '/api/safebrowsing': safeBrowsingRoute,
+    '/api/reverse-geocode': reverseGeocodeRoute,
+  };
 
     if (pathname.startsWith('/api/auth/')) {
       if (!db) {
@@ -315,7 +398,7 @@ function createApp(deps = {}) {
       }
       try {
         const body = await readJson(req);
-        const result = await postRoutes[pathname](body);
+        const result = await postRoutes[pathname](body, req);
         sendJson(res, 200, result);
       } catch (err) {
         if (err instanceof InputError || err instanceof HttpError) {

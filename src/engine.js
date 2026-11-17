@@ -81,11 +81,14 @@ function createEngine({ gemini = OFFLINE_GEMINI, logger = console } = {}) {
       });
       const civicResult = {
         intent: 'CIVIC',
+        risk_score: 0,
         score: 0,
         level: 'civic',
         lang,
         verdict: `Civic Grievance Detected — Routed to Urimai Engine (${urimaiKit.department})`,
         scamType: urimaiKit.department,
+        details: urimaiKit.summary,
+        action: urimaiKit.offlineInstructions,
         categoryIds: [intentCheck.civicCategory || 'civic_general'],
         explanation: urimaiKit.handoffReply,
         redFlags: [],
@@ -122,11 +125,14 @@ function createEngine({ gemini = OFFLINE_GEMINI, logger = console } = {}) {
       const urimaiKit = buildUrimaiKit({ text, lang, location: body.location, state: body.state, reporter: body.reporter });
       const civicRes = {
         intent: 'CIVIC',
+        risk_score: 0,
         score: 0,
         level: 'civic',
         lang,
         verdict: `Civic Grievance Detected — Routed to Urimai Engine (${urimaiKit.department})`,
         scamType: urimaiKit.department,
+        details: urimaiKit.summary,
+        action: urimaiKit.offlineInstructions,
         categoryIds: ['civic_general'],
         explanation: ai.explanation || urimaiKit.handoffReply,
         redFlags: [],
@@ -145,17 +151,22 @@ function createEngine({ gemini = OFFLINE_GEMINI, logger = console } = {}) {
     const score = combineScores(rules.score, ai?.score);
     const level = levelFor(score);
     const scamType = ai?.scamType || rules.scamType;
+    const verdict = localized(VERDICT, lang)[level];
+    const nextSteps = ai?.nextSteps?.length ? ai.nextSteps : localized(STEPS, lang);
     const result = {
       intent: score >= 25 ? 'SCAM' : 'SAFE',
+      risk_score: score,
       score,
       level,
       lang,
-      verdict: localized(VERDICT, lang)[level],
+      verdict,
       scamType,
+      details: ai?.explanation || verdict,
+      action: nextSteps[0] || '',
       categoryIds: rules.categories.map((c) => c.id),
       explanation: ai?.explanation || '',
       redFlags: ai?.redFlags?.length ? ai.redFlags : [...rules.tactics, ...rules.categories].map((r) => r.label),
-      nextSteps: ai?.nextSteps?.length ? ai.nextSteps : localized(STEPS, lang),
+      nextSteps,
       engine: ai ? `rules + ${gemini.model}` : 'rules (offline)',
       aiError,
       rules,
@@ -316,6 +327,29 @@ function createEngine({ gemini = OFFLINE_GEMINI, logger = console } = {}) {
     return getRadarFeed(body.city || 'All');
   }
 
+  /**
+   * URL threat heuristic checker used offline / as fallback for /api/safebrowsing.
+   */
+  async function safebrowsing(body = {}) {
+    const rawList = Array.isArray(body.urls) ? body.urls : [];
+    const textInput = typeof body.text === 'string' ? body.text : '';
+    const single = typeof body.url === 'string' ? body.url.trim() : '';
+    const extracted = textInput ? extractIndicators(textInput).urls : [];
+    const urls = [...new Set([...rawList, ...(single ? [single] : []), ...extracted].filter(Boolean))].slice(0, 10);
+    const flags = extractIndicators(urls.join(' ')).flags;
+    const suspiciousHosts = /(?:bit\.ly|tinyurl\.com|rb\.gy|cutt\.ly|inida-|sbi-kyc|hdfc-kyc|\.apk(?:$|[/?#])|\.top(?:$|[/?#])|\.xyz(?:$|[/?#]))/i;
+    const heuristicMatches = urls
+      .filter((u) => suspiciousHosts.test(u) || flags.some((f) => f.value === u))
+      .map((u) => ({ threatType: 'SOCIAL_ENGINEERING_HEURISTIC', url: u }));
+    return {
+      safe: heuristicMatches.length === 0,
+      source: 'offline-heuristics',
+      urls,
+      matches: heuristicMatches,
+      flags,
+    };
+  }
+
   return {
     analyze,
     urimai,
@@ -325,6 +359,7 @@ function createEngine({ gemini = OFFLINE_GEMINI, logger = console } = {}) {
     upiCheck,
     redact,
     radar,
+    safebrowsing,
     portals: () => STATE_PORTALS,
     languages: () => ({ languages: LANGUAGES }),
     aiEnabled: () => Boolean(gemini.enabled),
