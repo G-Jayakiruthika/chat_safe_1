@@ -1,0 +1,18 @@
+{
+  "name": "chat_safe_1",
+  "version": "3.0.0",
+  "description": "Chat_Safe × Urimai — AI Cyber Guardian & Civic Grievance Engine for Bharat in 23 Indian languages. Features Kavach 3D Voice Agent, Speed-Dial '9' IVR handoff, Urimai O2O PDF & Digital-First CM Portal bypass, Local Radar & Video News Reels, Daily Streak, and Google AI stack.",
+  "main": "server.js",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --env-file=.env server.js",
+    "build": "node tools/build-core.js public",
+    "test": "node --test test/*.test.js",
+    "coverage": "node --test --experimental-test-coverage test/*.test.js"
+  }
+}

@@ -1,0 +1,15 @@
+# Dependencies & environment
+node_modules/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.db
+*.sqlite*
+
+# Build / logs
+coverage/
+*.log
+.DS_Store
+Thumbs.db

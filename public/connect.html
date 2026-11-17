@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-palette="bluedragon">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Connect Chat_Safe × Urimai to WhatsApp, Telegram, Instagram, Messenger & Twilio Voice IVR Speed-Dial 9.">
+  <meta name="theme-color" content="#070b14">
+  <title>Chat_Safe × Urimai — Connect Apps &amp; Voice IVR</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="palettes.css">
+  <script src="theme.js"></script>
+</head>
+<body data-default-palette="bluedragon">
+  <canvas id="bg" class="bg" aria-hidden="true"></canvas>
+  <a class="skip" href="#main">Skip to main content</a>
+  <header class="top">
+    <a class="brand" href="index.html" aria-label="Chat_Safe home">
+      <img src="icon.svg" alt="" width="40" height="40">
+      <div>
+        <p class="logo">Chat<span>_</span>Safe</p>
+        <p class="tagline">AI cyber guardian &amp; Urimai civic bridge — in 23 languages</p>
+      </div>
+    </a>
+    <nav class="mainnav" aria-label="Pages">
+      <a href="index.html">Home</a>
+      <a href="app.html">Kavach × Urimai</a>
+      <a href="demo.html">8 Scams Demo</a>
+      <a href="connect.html" aria-current="page">Connect apps</a>
+      <a href="account.html">Account</a>
+    </nav>
+    <div class="controls">
+      <button type="button" id="themeToggle" class="icon-btn" aria-label="Switch theme">
+        <span class="sun" aria-hidden="true">☀️</span><span class="moon" aria-hidden="true">🌙</span>
+      </button>
+      <button type="button" id="btn-settings" class="icon-btn" aria-label="Display & accessibility settings" data-tip="Colours, text size & accessibility">⚙</button>
+      <div class="cursor-picker">
+        <button type="button" id="btn-cursor" class="icon-btn" aria-label="Choose cursor style" data-tip="Cursor style">✦</button>
+        <div class="cursor-menu glass" id="cursor-menu" hidden>
+          <div class="menu-title">Cursor style</div>
+          <button type="button" data-mode="orb">◎ Orbit ring</button>
+          <button type="button" data-mode="comet">☄ Comet trail</button>
+          <button type="button" data-mode="neon">〰 Neon ribbon</button>
+          <button type="button" data-mode="spark">✺ Spark burst</button>
+          <button type="button" data-mode="system">↖ System default</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="glass panel reveal">
+      <p class="eyebrow">CHANNELS &amp; VOICE IVR // 05</p>
+      <h1>Use Chat_Safe × Urimai inside your apps &amp; keypad phones</h1>
+      <p class="muted">Forward a suspicious message on WhatsApp/Telegram/Instagram, OR link a rural parent's feature phone to Speed-Dial '9' Voice IVR (Twilio + Gemini 2.5 Flash) to trigger instant Kavach SOS or Urimai Action Kits.</p>
+      <p id="modeNote" class="note" hidden></p>
+    </section>
+
+    <div id="channels" class="channel-grid" aria-live="polite"></div>
+
+    <section class="glass panel reveal" aria-labelledby="ownerTitle">
+      <h2 id="ownerTitle">Deploying Connectors (Google Cloud Run / Node.js)</h2>
+      <p class="muted">Each connector switches on when its keys are set as environment variables on the server. Secrets never reach the browser.</p>
+      <div class="setup-grid">
+        <article>
+          <h3>📞 Speed-Dial '9' Voice IVR (Twilio + Gemini)</h3>
+          <ol>
+            <li>Configure a Twilio programmable voice number pointing to <code>/api/agent</code>.</li>
+            <li>Rural elder dials <strong>9</strong> -> hears greeting in their chosen Indian language.</li>
+            <li>Gemini classifies Scam (Kavach SOS) vs Civic (Urimai Action Kit) and pushes to Family Hub.</li>
+          </ol>
+        </article>
+        <article>
+          <h3>✈️ Telegram bot</h3>
+          <ol>
+            <li>Create a bot with <strong>@BotFather</strong> and copy the token.</li>
+            <li>Set <code>TELEGRAM_BOT_TOKEN</code>, <code>TELEGRAM_WEBHOOK_SECRET</code> and <code>TELEGRAM_BOT_USERNAME</code>.</li>
+          </ol>
+          <pre><code id="tgCmd"></code></pre>
+          <button type="button" class="secondary" data-copy="tgCmd">Copy command</button>
+        </article>
+        <article>
+          <h3>🟢 WhatsApp Business (Cloud API)</h3>
+          <ol>
+            <li>Add WhatsApp Cloud API in Meta for Developers.</li>
+            <li>Set <code>META_APP_SECRET</code>, <code>META_VERIFY_TOKEN</code>, <code>WHATSAPP_TOKEN</code>, <code>WHATSAPP_PHONE_NUMBER_ID</code>.</li>
+            <li>Callback URL: <code class="hookUrl"></code>, subscribe to <em>messages</em>.</li>
+          </ol>
+        </article>
+        <article>
+          <h3>📸 Instagram DMs &amp; Messenger</h3>
+          <ol>
+            <li>Connect Instagram professional account or Facebook Page to the Meta app.</li>
+            <li>Use callback URL <code class="hookUrl"></code> with HMAC <code>X-Hub-Signature-256</code> verification.</li>
+          </ol>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot"><p>Chat_Safe × Urimai · Emergency: <a href="tel:1930">1930</a> · <a href="tel:112">112</a></p></footer>
+  <script src="api.js" defer></script>
+  <script src="fx.js" defer></script>
+  <script src="connect.js" defer></script>
+  <script src="cursor.js" defer></script>
+</body>
+</html>

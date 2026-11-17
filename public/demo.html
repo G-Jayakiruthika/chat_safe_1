@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-palette="nautilus">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="8 Scams & Civic Grievances, Decoded — Sticky Scroll 3D Phone Demo from TrueSafe × Chat_Safe.">
+  <meta name="theme-color" content="#070b14">
+  <title>Chat_Safe × Urimai — 8 Scams &amp; Civic Cases Decoded</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="palettes.css">
+  <script src="theme.js"></script>
+</head>
+<body data-default-palette="nautilus">
+  <canvas id="bg" class="bg" aria-hidden="true"></canvas>
+  <a class="skip" href="#main">Skip to main content</a>
+
+  <header class="top">
+    <a class="brand" href="index.html" aria-label="Chat_Safe home">
+      <img src="icon.svg" alt="" width="40" height="40">
+      <div>
+        <p class="logo">Chat<span>_</span>Safe</p>
+        <p class="tagline">8 Scams &amp; Urimai Civic Cases — Sticky Scroll Demo</p>
+      </div>
+    </a>
+    <nav class="mainnav" aria-label="Pages">
+      <a href="index.html">Home</a>
+      <a href="app.html">Kavach × Urimai</a>
+      <a href="demo.html" aria-current="page">8 Scams Demo</a>
+      <a href="connect.html">Connect apps</a>
+      <a href="account.html">Account</a>
+    </nav>
+    <div class="controls">
+      <button type="button" id="themeToggle" class="icon-btn" aria-label="Switch theme">
+        <span class="sun" aria-hidden="true">☀️</span><span class="moon" aria-hidden="true">🌙</span>
+      </button>
+      <button type="button" id="btn-settings" class="icon-btn" aria-label="Display & accessibility settings" data-tip="Colours, text size & accessibility">⚙</button>
+      <div class="cursor-picker">
+        <button type="button" id="btn-cursor" class="icon-btn" aria-label="Choose cursor style" data-tip="Cursor style">✦</button>
+        <div class="cursor-menu glass" id="cursor-menu" hidden>
+          <div class="menu-title">Cursor style</div>
+          <button type="button" data-mode="orb">◎ Orbit ring</button>
+          <button type="button" data-mode="comet">☄ Comet trail</button>
+          <button type="button" data-mode="neon">〰 Neon ribbon</button>
+          <button type="button" data-mode="spark">✺ Spark burst</button>
+          <button type="button" data-mode="system">↖ System default</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="glass panel">
+      <p class="eyebrow">TRUESAFE STICKY SCROLL DEMO // 10 REAL-WORLD SCENARIOS</p>
+      <h1 style="margin:0 0 .5rem;font-size:clamp(2rem,4.5vw,3.2rem)">8 scams &amp; 2 civic emergencies, decoded.</h1>
+      <p class="muted" style="max-width:65ch">Scroll down on the left to watch the sticky phone on the right update in real time with Kavach's scam verdict or Urimai's civic handoff.</p>
+      <div class="actions">
+        <a class="button primary" href="app.html">Open Live Scanner &amp; Speed-Dial 9 →</a>
+      </div>
+    </section>
+
+    <div class="demo-sticky-grid">
+      <ol id="demoSteps" class="demo-scroll-list"></ol>
+      <aside aria-label="Live phone preview">
+        <div class="demo-sticky-phone" id="demoPhone">
+          <div class="demo-notch" aria-hidden="true"></div>
+          <p class="small muted" id="dpSender" style="margin:0">Unknown sender · now</p>
+          <div class="demo-msg-bubble" id="dpMsg"></div>
+          <div class="demo-verdict-box scam" id="dpVerdictBox">
+            <p class="eyebrow" id="dpEngine" style="margin:0 0 .25rem">KAVACH VERDICT</p>
+            <strong id="dpTitle" style="font-size:1.1rem"></strong>
+            <p id="dpTip" style="margin:.4rem 0 0;font-size:.9rem"></p>
+          </div>
+          <div class="actions" style="margin-top:auto">
+            <a id="dpTryLink" class="button primary wide" href="app.html">Test this in AI Scanner →</a>
+          </div>
+          <p class="small muted" style="text-align:center;margin:0" id="dpFooter">Report on 1930 · cybercrime.gov.in</p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <p>Chat_Safe × Urimai · <a href="index.html">Home</a> · <a href="app.html">Web App</a> · Emergency: <a href="tel:1930">1930</a></p>
+  </footer>
+
+  <script src="fx.js" defer></script>
+  <script src="demo.js" defer></script>
+  <script src="cursor.js" defer></script>
+</body>
+</html>

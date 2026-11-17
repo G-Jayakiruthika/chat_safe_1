@@ -1,0 +1,150 @@
+/* ===========================================================================
+   Sea-creature palettes — the full colour identity, not a tint over black.
+   Each palette owns its background, surfaces, text and four accents, and each
+   is written twice: once for light mode, once for dark. The dark version is a
+   deep shade OF THAT CREATURE (plum, navy, burgundy…), never a generic black.
+   =========================================================================== */
+
+/* ---------------- 1. MOON JELLYFISH — lavender · lilac · pearl · blush · ice blue */
+[data-palette="jellyfish"][data-theme="light"] {
+  --bg: #f4eefc; --bg2: #fffdff; --ink: #2b2140; --muted: #6a5c86;
+  --border: #d9c9ef; --glass: rgb(255 255 255 / .74);
+  --accent: #7a4fd4; --accent2: #b08ae8; --accent3: #f2cfe0; --accent4: #8fc9e8;
+  --shadow: 0 14px 40px rgb(122 79 212 / .18);
+}
+[data-palette="jellyfish"][data-theme="dark"] {
+  --bg: #19112e; --bg2: #241a3f; --ink: #f0e9ff; --muted: #b3a3d4;
+  --border: rgb(179 157 255 / .3); --glass: rgb(36 26 63 / .72);
+  --accent: #bda4ff; --accent2: #d9c6ff; --accent3: #ffd2e5; --accent4: #a5dcf5;
+  --shadow: 0 14px 44px rgb(0 0 0 / .5);
+}
+
+/* ---------------- 2. NAUTILUS — coral · ivory · champagne · navy */
+[data-palette="nautilus"][data-theme="light"] {
+  --bg: #fcf5e9; --bg2: #fffdf8; --ink: #15263f; --muted: #5d6b82;
+  --border: #e4cfb0; --glass: rgb(255 253 248 / .8);
+  --accent: #e8614a; --accent2: #c99b63; --accent3: #1e3a5f; --accent4: #f0d9b5;
+  --shadow: 0 14px 40px rgb(30 58 95 / .14);
+}
+[data-palette="nautilus"][data-theme="dark"] {
+  --bg: #0e1d33; --bg2: #172b48; --ink: #f7ecdb; --muted: #a8bdd6;
+  --border: rgb(255 141 121 / .3); --glass: rgb(23 43 72 / .76);
+  --accent: #ff8d79; --accent2: #e8c39e; --accent3: #9fc4ee; --accent4: #fff2dd;
+  --shadow: 0 14px 44px rgb(0 0 0 / .5);
+}
+
+/* ---------------- 3. MANDARIN FISH — royal blue · orange · turquoise · gold */
+[data-palette="mandarin"][data-theme="light"] {
+  --bg: #edf3ff; --bg2: #ffffff; --ink: #11213d; --muted: #556a8c;
+  --border: #c3d6f5; --glass: rgb(255 255 255 / .78);
+  --accent: #2a55d6; --accent2: #ef6c12; --accent3: #0f9f9f; --accent4: #c98a06;
+  --shadow: 0 14px 40px rgb(42 85 214 / .16);
+}
+[data-palette="mandarin"][data-theme="dark"] {
+  --bg: #081633; --bg2: #102449; --ink: #e9f1ff; --muted: #9db6dd;
+  --border: rgb(91 140 255 / .32); --glass: rgb(16 36 73 / .74);
+  --accent: #5b8cff; --accent2: #ff9442; --accent3: #2ee0d8; --accent4: #ffc53d;
+  --shadow: 0 14px 44px rgb(0 0 0 / .52);
+}
+
+/* ---------------- 4. LIONFISH — rust · burgundy · cream · black */
+[data-palette="lionfish"][data-theme="light"] {
+  --bg: #fbf3e7; --bg2: #fffdf9; --ink: #2a0d14; --muted: #6d4a46;
+  --border: #e3c6ab; --glass: rgb(255 253 249 / .8);
+  --accent: #b8431f; --accent2: #851236; --accent3: #d98a5a; --accent4: #2a0d14;
+  --shadow: 0 14px 40px rgb(133 18 54 / .16);
+}
+[data-palette="lionfish"][data-theme="dark"] {
+  --bg: #190a10; --bg2: #2a1019; --ink: #f8e9d9; --muted: #cfa391;
+  --border: rgb(255 107 67 / .32); --glass: rgb(42 16 25 / .76);
+  --accent: #ff6f45; --accent2: #e9507a; --accent3: #f6ddc5; --accent4: #ffb088;
+  --shadow: 0 14px 44px rgb(0 0 0 / .58);
+}
+
+/* ---------------- 5. PEACOCK MANTIS SHRIMP — magenta · teal · purple · lime */
+[data-palette="mantis"][data-theme="light"] {
+  --bg: #f7effa; --bg2: #ffffff; --ink: #2a1038; --muted: #6b4a7d;
+  --border: #e0c8ef; --glass: rgb(255 255 255 / .78);
+  --accent: #c71580; --accent2: #0a938c; --accent3: #7030dd; --accent4: #4f8f00;
+  --shadow: 0 14px 40px rgb(199 21 128 / .16);
+}
+[data-palette="mantis"][data-theme="dark"] {
+  --bg: #170a26; --bg2: #24103e; --ink: #f7eaff; --muted: #c2a3d9;
+  --border: rgb(255 61 154 / .32); --glass: rgb(36 16 62 / .74);
+  --accent: #ff3d9a; --accent2: #19e3c1; --accent3: #b06bff; --accent4: #c9f270;
+  --shadow: 0 14px 44px rgb(0 0 0 / .55);
+}
+
+/* ---------------- 6. SEA ANEMONE — fuchsia · coral · orange · aqua · lilac */
+[data-palette="anemone"][data-theme="light"] {
+  --bg: #fff1f6; --bg2: #ffffff; --ink: #3a0f28; --muted: #7d4a63;
+  --border: #f6c9da; --glass: rgb(255 255 255 / .78);
+  --accent: #cc1468; --accent2: #e05533; --accent3: #d97b06; --accent4: #0d8f9e;
+  --shadow: 0 14px 40px rgb(204 20 104 / .16);
+}
+[data-palette="anemone"][data-theme="dark"] {
+  --bg: #24081a; --bg2: #3a0f29; --ink: #ffe9f3; --muted: #e0a6c2;
+  --border: rgb(255 77 157 / .32); --glass: rgb(58 15 41 / .76);
+  --accent: #ff4d9d; --accent2: #ff7a5c; --accent3: #ffa33d; --accent4: #3ddbe8;
+  --shadow: 0 14px 44px rgb(0 0 0 / .55);
+}
+
+/* ---------------- 7. BLUE DRAGON — cobalt · ice blue · silver · white */
+[data-palette="bluedragon"][data-theme="light"] {
+  --bg: #eef4fd; --bg2: #ffffff; --ink: #0d1b2e; --muted: #526377;
+  --border: #c5d9ef; --glass: rgb(255 255 255 / .8);
+  --accent: #1544c4; --accent2: #3f91c9; --accent3: #5b6b80; --accent4: #0f172a;
+  --shadow: 0 14px 40px rgb(21 68 196 / .15);
+}
+[data-palette="bluedragon"][data-theme="dark"] {
+  --bg: #061430; --bg2: #0d2348; --ink: #eaf4ff; --muted: #9fb8d6;
+  --border: rgb(79 139 255 / .32); --glass: rgb(13 35 72 / .76);
+  --accent: #4f8bff; --accent2: #8fd3f4; --accent3: #cdd9e8; --accent4: #ffffff;
+  --shadow: 0 14px 44px rgb(0 0 0 / .54);
+}
+
+/* ---------------- 8. STARFISH — terracotta · peach · cream · seafoam */
+[data-palette="starfish"][data-theme="light"] {
+  --bg: #fdf5ec; --bg2: #fffcf8; --ink: #3a2416; --muted: #7a5a44;
+  --border: #ead0b6; --glass: rgb(255 252 248 / .8);
+  --accent: #b7542f; --accent2: #e08b5f; --accent3: #1f8f84; --accent4: #8a5a3b;
+  --shadow: 0 14px 40px rgb(183 84 47 / .16);
+}
+[data-palette="starfish"][data-theme="dark"] {
+  --bg: #1d120c; --bg2: #2e1d15; --ink: #fcefe1; --muted: #d4ab8c;
+  --border: rgb(240 168 132 / .32); --glass: rgb(46 29 21 / .76);
+  --accent: #f0a884; --accent2: #ffc9a8; --accent3: #4ecdc4; --accent4: #ffe3c9;
+  --shadow: 0 14px 44px rgb(0 0 0 / .55);
+}
+
+/* ---------------------------------------------------------------------------
+   Shared behaviour: every palette gets the same soft wash and the same
+   transition, so a scroll between sections drifts the whole page's hue.
+   --------------------------------------------------------------------------- */
+body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1100px 580px at 84% -10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 68%),
+    radial-gradient(900px 520px at -10% 106%, color-mix(in srgb, var(--accent2) 20%, transparent), transparent 68%),
+    radial-gradient(700px 400px at 50% 50%, color-mix(in srgb, var(--accent3) 10%, transparent), transparent 70%);
+  background-attachment: fixed;
+  transition: background-color .9s ease, color .9s ease;
+}
+[data-theme="light"] body { background-image:
+    radial-gradient(1100px 580px at 84% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 68%),
+    radial-gradient(900px 520px at -10% 106%, color-mix(in srgb, var(--accent2) 16%, transparent), transparent 68%); }
+
+/* Anything that carries palette colour fades between palettes rather than snapping. */
+.top, .glass, .panel, .result, .type-card, .stat-tile, .feature, .step, .story,
+button, .button, .chip, .tabs [role="tab"], .daily, .explainer, input, textarea, select {
+  transition: background-color .7s ease, border-color .7s ease, color .7s ease, box-shadow .7s ease;
+}
+
+/* Named swatch row, so the palette in use is visible and nameable */
+.palette-note { display: flex; gap: .5rem; align-items: center; font-size: .72rem; color: var(--muted); }
+.swatches { display: inline-flex; gap: 3px; }
+.swatches i { width: 12px; height: 12px; border-radius: 3px; display: block; border: 1px solid rgb(0 0 0 / .12); }
+.swatches i:nth-child(1) { background: var(--accent); }
+.swatches i:nth-child(2) { background: var(--accent2); }
+.swatches i:nth-child(3) { background: var(--accent3); }
+.swatches i:nth-child(4) { background: var(--accent4); }
