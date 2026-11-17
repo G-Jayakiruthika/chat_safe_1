@@ -79,9 +79,12 @@
   }
 
   /**
-   * Dynamically injects a glassmorphism UI modal asking the user/judge for their
-   * Gemini API key when the Cloud Run server is unreachable/offline.
-   * Resolves with the entered key (saved to sessionStorage) or '' if skipped.
+   * Dynamically injects a glassmorphism BYOK configuration modal over app.html
+   * when Cloud Run is unavailable and no session API key is present.
+   *
+   * @param {(hasKey: boolean) => void} [onSaved] Optional callback invoked after submit or dismissal.
+   * @param {string} [promptText] Instructional message rendered inside the modal dialog.
+   * @returns {Promise<string>} Resolves to the saved Gemini API key, or an empty string if skipped.
    */
   function showByokModal(onSaved, promptText = 'Cloud Server offline. Enter Gemini API Key to run locally in Edge Mode:') {
     return new Promise((resolve) => {
@@ -189,13 +192,24 @@
   ].join(' ');
 
   /**
-   * Dual-Mode Intent Router:
-   *  1) Primary Server Call: POST api/analyze (/api/analyze on Cloud Run Node.js)
-   *  2) BYOK Fallback Trigger: if server fails/404/500, checks sessionStorage.gemini_key
-   *     and prompts with the Edge Mode modal if missing
-   *  3) Edge AI Call: direct fetch() to Gemini 2.5 Flash REST API using sessionStorage key
+   * Routes a citizen utterance or suspicious forward through the Dual-Mode AI pipeline:
+   *  1. Immediate native offline check (`!navigator.onLine`).
+   *  2. Primary Cloud Run backend (`POST api/analyze`).
+   *  3. Edge BYOK fallback using `sessionStorage.gemini_key` against Gemini 2.5 Flash.
+   *  4. Deterministic local rule engine failover.
+   *
+   * @param {string} text Cleaned message or speech transcript to analyze.
+   * @returns {Promise<object>} Structured routing verdict (`intent`, `risk_score`, `details`, `action`, `_source`).
    */
   async function analyzeIntent(text) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const offlineMsg = 'Network disconnected. Falling back to local offline rules.';
+      setConnectionStatus('offline');
+      toast(offlineMsg);
+      if ($('xrayStatus')) $('xrayStatus').textContent = offlineMsg;
+      return { _source: 'local-offline', _offlineFallback: true };
+    }
+
     // 1. Primary Server Call (/api/analyze)
     try {
       const serverRes = await fetch('api/analyze', {
@@ -273,6 +287,14 @@
   /* =========================================================================
    * PHASE 3: GOOGLE MAPS GEOLOCATION, SAFE BROWSING API & THEME STATE MANAGEMENT
    * ========================================================================= */
+  /**
+   * Swaps the global UI CSS theme and palette dynamically between Urimai Blue
+   * (`bluedragon` + `.civic-theme`) and Kavach Red (`lionfish` + `.scam-theme`).
+   *
+   * @param {'SCAM'|'CIVIC'|'SAFE'} intent Classified intent returned by AI/rules.
+   * @param {number} [score=0] Risk score on a 0–100 scale.
+   * @returns {void}
+   */
   function switchIntentPalette(intent, score = 0) {
     const isCivic = intent === 'CIVIC';
     const isScam = !isCivic && (intent === 'SCAM' || score >= 50);
@@ -286,30 +308,51 @@
   }
 
   /**
-   * Acquires browser GPS coordinates and resolves a formatted street address via
-   * Google Maps Reverse Geocoding API (or Cloud Run / simulated demo ward fallback).
+   * Acquires browser GPS coordinates inside strict error boundaries and resolves a formatted
+   * street address via Google Maps Reverse Geocoding API (with server and simulated ward fallbacks).
+   *
+   * @returns {Promise<{address: string, coords?: {lat: number, lng: number}, source: string}>} Resolved civic location metadata.
    */
   async function getGoogleMapsLocation() {
     const fallbackAddress = 'Location: Simulated Ward 12, Coimbatore, Tamil Nadu';
+    const deniedMsg = 'Location permission denied. Using manual entry.';
     if (!navigator.geolocation) {
+      if ($('detected-address')) $('detected-address').textContent = deniedMsg;
+      if ($('geoStatus')) $('geoStatus').textContent = deniedMsg;
       return { address: fallbackAddress, source: 'simulated-ward' };
     }
 
-    const position = await new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(null),
-        { timeout: 3500, maximumAge: 60_000 },
-      );
-    });
+    let position = null;
+    let denied = false;
+    try {
+      position = await new Promise((resolve) => {
+        try {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => { denied = true; resolve(null); },
+            { timeout: 3500, maximumAge: 60_000 },
+          );
+        } catch {
+          denied = true;
+          resolve(null);
+        }
+      });
+    } catch {
+      denied = true;
+      position = null;
+    }
 
     if (!position) {
-      return { address: fallbackAddress, source: 'simulated-ward' };
+      if (denied) {
+        if ($('detected-address')) $('detected-address').textContent = deniedMsg;
+        if ($('geoStatus')) $('geoStatus').textContent = deniedMsg;
+      }
+      return { address: fallbackAddress, source: denied ? 'permission-denied-fallback' : 'simulated-ward' };
     }
 
     const { lat, lng } = position;
     const mapsKey = getSessionKey('GOOGLE_MAPS_KEY') || getSessionKey('GOOGLE_MAPS_API_KEY');
-    if (mapsKey) {
+    if (mapsKey && (!navigator || navigator.onLine)) {
       try {
         const geoRes = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?latlng=${encodeURIComponent(lat)},${encodeURIComponent(lng)}&key=${encodeURIComponent(mapsKey)}`,
@@ -342,6 +385,12 @@
 
   const URL_DETECT_REGEX = /\b(?:https?:\/\/|www\.)[^\s<>"')]+|\b(?:bit\.ly|tinyurl\.com|t\.me|wa\.me|rb\.gy|cutt\.ly)\/[^\s<>"')]+/gi;
 
+  /**
+   * Extracts up to 10 normalized HTTP/HTTPS URLs from citizen-submitted text.
+   *
+   * @param {string} text Raw SMS, WhatsApp, or transcript content.
+   * @returns {string[]} Deduplicated array of normalized URLs.
+   */
   function extractUrlsFromText(text) {
     const raw = String(text || '');
     const found = [...raw.matchAll(URL_DETECT_REGEX)].map((m) => {
@@ -352,8 +401,11 @@
   }
 
   /**
-   * Checks extracted URLs against Google Safe Browsing API v4 when SAFE_BROWSING_KEY
-   * is stored in sessionStorage, with graceful fallback to /api/safebrowsing & local heuristics.
+   * Checks one or more URLs against Google Safe Browsing API v4 using `SAFE_BROWSING_KEY`
+   * from `sessionStorage`, falling back to `/api/safebrowsing` and local heuristics if offline.
+   *
+   * @param {string|string[]} urlOrList Single URL or array of URLs to inspect.
+   * @returns {Promise<{safe: boolean, matches: Array<{url: string, threatType: string}>, urls: string[], source: string}>} Threat verdict.
    */
   async function checkSafeBrowsing(urlOrList) {
     const urls = (Array.isArray(urlOrList) ? urlOrList : [urlOrList]).filter(Boolean);
@@ -488,32 +540,59 @@
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognizer = null;
 
+  /**
+   * Initializes the browser Web Speech API (`SpeechRecognition`) with strict permission
+   * error handling so denied microphone access never throws unhandled exceptions.
+   *
+   * @param {(transcript: string) => void} onText Callback invoked with the recognized speech string.
+   * @returns {void}
+   */
   function startMic(onText) {
     if (!SR) { toast(t('noMic')); return; }
-    if (recognizer) { recognizer.stop(); return; }
-    window.speechSynthesis?.cancel();
-    Sound.play('blip');
-    const rec = new SR();
-    rec.lang = lang === 'auto' ? 'en-IN' : langInfo(lang).speech;
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-    recognizer = rec;
-    $('mic').setAttribute('aria-pressed', 'true');
-    $('micLabel').textContent = t('micStop');
-    setAgentState('listening');
-    setMood('idle');
-    rec.onresult = (e) => {
-      const said = e.results[0]?.[0]?.transcript?.trim();
-      if (said) onText(said);
-    };
-    rec.onerror = () => toast('Could not hear clearly — try typing or speaking again.');
-    rec.onend = () => {
+    if (recognizer) {
+      try { recognizer.stop(); } catch { recognizer = null; }
+      return;
+    }
+    try {
+      window.speechSynthesis?.cancel();
+      Sound.play('blip');
+      const rec = new SR();
+      rec.lang = lang === 'auto' ? 'en-IN' : langInfo(lang).speech;
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      recognizer = rec;
+      $('mic').setAttribute('aria-pressed', 'true');
+      $('micLabel').textContent = t('micStop');
+      setAgentState('listening');
+      setMood('idle');
+      rec.onresult = (e) => {
+        const said = e.results[0]?.[0]?.transcript?.trim();
+        if (said) onText(said);
+      };
+      rec.onerror = (evt) => {
+        const denied = evt?.error === 'not-allowed' || evt?.error === 'service-not-allowed';
+        const msg = denied
+          ? 'Microphone permission denied. Please type your message below.'
+          : 'Could not hear clearly — try typing or speaking again.';
+        if ($('xrayStatus')) $('xrayStatus').textContent = msg;
+        toast(msg);
+      };
+      rec.onend = () => {
+        recognizer = null;
+        $('mic').setAttribute('aria-pressed', 'false');
+        $('micLabel').textContent = t('micStart');
+        if ($('agentState').textContent === t('state_listening')) setAgentState('idle');
+      };
+      rec.start();
+    } catch {
       recognizer = null;
       $('mic').setAttribute('aria-pressed', 'false');
       $('micLabel').textContent = t('micStart');
-      if ($('agentState').textContent === t('state_listening')) setAgentState('idle');
-    };
-    rec.start();
+      setAgentState('idle');
+      const errMsg = 'Microphone permission denied or unavailable. Please type your message.';
+      if ($('xrayStatus')) $('xrayStatus').textContent = errMsg;
+      toast(errMsg);
+    }
   }
   $('mic').addEventListener('click', () => startMic((said) => askAgent(said)));
   $('scannerMicBtn').addEventListener('click', () => startMic((said) => {
@@ -829,7 +908,13 @@
     toast('✅ Verified scam video published to Daily News Reels!');
   });
 
-  /* ---------- TAB 2: UNIFIED AI SCANNER (KAVACH RED VS URIMAI BLUE) ---------- */
+  /**
+   * Executes the unified Kavach × Urimai Multi-Agent scan flow: Safe Browsing link check,
+   * Dual-Mode Gemini Intent Routing, Google Maps GPS lookup for civic petitions, and DOM updates.
+   *
+   * @param {string} text Raw text pasted or spoken by the user.
+   * @returns {Promise<void>} Resolves once UI panels, palettes, and avatar states are updated.
+   */
   async function runSmartScan(text) {
     const clean = text.trim();
     if (!clean) return;
@@ -1356,19 +1441,27 @@
   /* ---------- TAB 9: GOOGLE ECOSYSTEM & 8 AGENTS ---------- */
   window.ChatSafeAgents?.mountAgentGrid($('appAgentGrid'));
   $('detectLocationBtn').addEventListener('click', () => {
+    const deniedMsg = 'Location permission denied. Using manual entry.';
     if (!navigator.geolocation) {
-      $('geoStatus').textContent = 'Geolocation unavailable — defaulting to Ward 12, Coimbatore.';
+      $('geoStatus').textContent = deniedMsg;
+      if ($('detected-address')) $('detected-address').textContent = deniedMsg;
       return;
     }
     $('geoStatus').textContent = 'Checking GPS coordinates…';
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        $('geoStatus').textContent = `📍 Lat ${pos.coords.latitude.toFixed(4)}, Lng ${pos.coords.longitude.toFixed(4)} — Ward matched! Ready for Google Maps & CM Helpline routing.`;
-      },
-      () => {
-        $('geoStatus').textContent = 'Permission declined — using Ward 12, Coimbatore (Remote Hostel Mode available in Family Hub).';
-      },
-    );
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          $('geoStatus').textContent = `📍 Lat ${pos.coords.latitude.toFixed(4)}, Lng ${pos.coords.longitude.toFixed(4)} — Ward matched! Ready for Google Maps & CM Helpline routing.`;
+        },
+        () => {
+          $('geoStatus').textContent = deniedMsg;
+          if ($('detected-address')) $('detected-address').textContent = deniedMsg;
+        },
+      );
+    } catch {
+      $('geoStatus').textContent = deniedMsg;
+      if ($('detected-address')) $('detected-address').textContent = deniedMsg;
+    }
   });
   $('gmailDraftBtn').addEventListener('click', () => {
     const subj = encodeURIComponent(`Urimai Civic Grievance: ${activeUrimaiKit?.summary || 'Broken Water Pipe'}`);
