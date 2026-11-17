@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const BOOT_LOGS = [
@@ -14,10 +14,12 @@ export default function Preloader({ onComplete }) {
   const [progress, setProgress] = useState(0);
   const [logIndex, setLogIndex] = useState(0);
   const [done, setDone] = useState(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const start = Date.now();
-    const duration = 1600; // 1.6s smooth load
+    const duration = 1200; // 1.2s fast & smooth load
 
     const timer = setInterval(() => {
       const elapsed = Date.now() - start;
@@ -29,24 +31,36 @@ export default function Preloader({ onComplete }) {
 
       if (pct >= 100) {
         clearInterval(timer);
-        setTimeout(() => {
-          setDone(true);
-          setTimeout(() => onComplete?.(), 400);
-        }, 200);
+        setDone(true);
+        onCompleteRef.current?.();
       }
-    }, 35);
+    }, 30);
 
-    return () => clearInterval(timer);
-  }, [onComplete]);
+    // Hard fallback timeout ensures preloader NEVER stays frozen
+    const fallback = setTimeout(() => {
+      clearInterval(timer);
+      setDone(true);
+      onCompleteRef.current?.();
+    }, 1500);
+
+    return () => {
+      clearInterval(timer);
+      clearTimeout(fallback);
+    };
+  }, []);
 
   return (
     <AnimatePresence>
       {!done && (
         <motion.div
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.02 }}
-          transition={{ duration: 0.5, ease: 'easeInOut' }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#05060f] text-white select-none overflow-hidden"
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          onClick={() => {
+            setDone(true);
+            onCompleteRef.current?.();
+          }}
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#05060f] text-white select-none overflow-hidden cursor-pointer"
           style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
         >
           {/* Subtle Ambient Radial Wash */}
@@ -55,7 +69,7 @@ export default function Preloader({ onComplete }) {
           {/* Central Shield Graphic (from Chat_Safe SVG) */}
           <div className="relative mb-8 flex flex-col items-center">
             <svg
-              className="w-24 h-28 drop-shadow-[0_0_28px_rgba(34,211,238,0.7)] text-cyan-400"
+              className="w-20 h-24 sm:w-24 sm:h-28 drop-shadow-[0_0_28px_rgba(34,211,238,0.7)] text-cyan-400"
               viewBox="0 0 64 72"
               fill="none"
               aria-hidden="true"
@@ -68,7 +82,7 @@ export default function Preloader({ onComplete }) {
                 strokeLinejoin="round"
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
-                transition={{ duration: 1.1, ease: 'easeInOut' }}
+                transition={{ duration: 0.9, ease: 'easeInOut' }}
               />
 
               {/* Central Checkmark Path */}
@@ -80,7 +94,7 @@ export default function Preloader({ onComplete }) {
                 strokeLinejoin="round"
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
-                transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}
+                transition={{ duration: 0.5, delay: 0.5, ease: 'easeOut' }}
               />
             </svg>
 
@@ -118,6 +132,10 @@ export default function Preloader({ onComplete }) {
               {BOOT_LOGS[logIndex]}
             </p>
           </div>
+
+          <span className="mt-6 text-[10px] font-mono text-slate-500 tracking-widest uppercase">
+            Click anywhere to skip
+          </span>
         </motion.div>
       )}
     </AnimatePresence>

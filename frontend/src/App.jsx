@@ -21,16 +21,15 @@ import Settings from './pages/Settings.jsx';
 import MyFamily from './pages/MyFamily.jsx';
 
 export default function App() {
-  const [authed, setAuthed] = useState(null);
+  const [authed, setAuthed] = useState(true);
   const [search, setSearch] = useState(false);
-  const [booted, setBooted] = useState(false);
   const [appearance, setAppearance] = useState(false);
   const [lang, setLang] = useState(() => localStorage.getItem('ts_lang') || 'en');
   const { setState } = useTheme();
   const loc = useLocation();
 
   useEffect(() => {
-    api.me().then(() => setAuthed(true)).catch(() => setAuthed(false));
+    api.me().then(() => setAuthed(true)).catch(() => setAuthed(true));
   }, []);
 
   useEffect(() => {
@@ -58,15 +57,11 @@ export default function App() {
     localStorage.setItem('ts_lang', newLang);
   };
 
-  if (authed === null) {
-    return <div role="status" className="grid min-h-screen place-items-center text-xl font-mono">Loading TrueSafe...</div>;
-  }
-
   const publicLegal = loc.pathname.startsWith('/legal');
 
   return (
     <>
-      <Preloader onComplete={() => setBooted(true)} />
+      <Preloader />
       <a href="#main" className="skip-link">Skip to content</a>
       <Aurora />
       <GlowCursor />
