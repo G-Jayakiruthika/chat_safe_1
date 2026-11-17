@@ -862,6 +862,7 @@ body.notes-off #sf-tip { display: none !important; }
   width: 72px; height: 72px; padding: 0; border-radius: 50%; font-size: 1.6rem;
   background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--accent-ink); box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 55%, transparent);
 }
+.player-big-play:active { transform: translate(-50%, -50%) scale(.94); }
 .player-controls { display: flex; align-items: center; gap: .6rem; margin-top: .55rem; }
 .player-controls .icon-btn { color: #eef4ff; border-color: rgb(255 255 255 / .22); width: 40px; height: 40px; min-height: 40px; flex: 0 0 auto; }
 [data-theme="light"] .player-controls .icon-btn { color: #0f172a; border-color: var(--border); }

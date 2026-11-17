@@ -4,11 +4,13 @@
  * Service worker: makes Chat_Safe installable (needed for the Android "Share → Chat_Safe"
  * target) and keeps the app shell available offline. API calls are never cached.
  */
-const CACHE = 'chatsafe-v2.3';
+const CACHE = 'chatsafe-v3.1';
 const SHELL = [
-  './', 'index.html', 'app.html', 'connect.html', 'account.html', 'styles.css', 'landing.css', 'palettes.css', 'explainer.css',
-  'theme.js', 'i18n.js', 'api.js', 'history.js', 'sound.js', 'fx.js', 'avatar.js', 'app.js', 'demo.js',
-  'morph.js', 'landing.js', 'icons.js', 'cursor.js', 'autopilot.js', 'game.js', 'connect.js', 'account.js', 'explainer.js', 'scamtypes.js', 'core.js', 'icon.svg', 'manifest.webmanifest',
+  './', 'index.html', 'app.html', 'demo.html', 'proxy.html', 'connect.html', 'account.html',
+  'styles.css', 'landing.css', 'palettes.css',
+  'theme.js', 'i18n.js', 'api.js', 'history.js', 'sound.js', 'fx.js', 'avatar.js', 'agentAvatars.js',
+  'videoExplainer.js', 'videoReels.js', 'pdf.js', 'app.js', 'demo.js', 'proxy.js',
+  'morph.js', 'landing.js', 'icons.js', 'cursor.js', 'connect.js', 'account.js', 'scamtypes.js', 'core.js', 'icon.svg', 'manifest.webmanifest',
 ];
 
 self.addEventListener('install', (event) => {

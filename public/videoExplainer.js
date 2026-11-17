@@ -125,7 +125,8 @@
       text(`0${chIdx + 1} / 0${CHAPTERS.length}  ·  ${ch.name.toUpperCase()}`, 60, 134, 14, C.cyan, 700, 'left', true);
 
       if (time < 8) {
-        const p = seg(time, 0, 1.5);
+        // Keep keypad phone immediately visible at t=0 so thumbnail is vivid; animate wave & bubbles
+        const p = Math.max(0.95, seg(time, 0, 0.8));
         ctx.globalAlpha = p;
         // Keypad phone visual
         rr(140, 190, 260, 440, 32);
@@ -138,20 +139,21 @@
         ctx.fillStyle = '#06202c';
         ctx.fill();
         text('SPEED DIAL 9', 270, 260, 15, C.cyan, 700, 'center', true);
-        text('📞 Calling Vani AI…', 270, 305, 17, C.ink, 600, 'center');
+        text(playing ? '📞 Calling Vani AI…' : '📞 Press Play to Watch', 270, 305, 16, C.ink, 600, 'center');
         // Keypad grid
         const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
         keys.forEach((k, idx) => {
           const kx = 175 + (idx % 3) * 68;
           const ky = 390 + Math.floor(idx / 3) * 62;
           rr(kx, ky, 54, 46, 10);
-          ctx.fillStyle = k === '9' ? C.cyan : '#1e293b';
+          const pulse9 = k === '9' && playing ? `rgba(34,211,238,${0.75 + 0.25 * Math.sin(time * 8)})` : (k === '9' ? C.cyan : '#1e293b');
+          ctx.fillStyle = pulse9;
           ctx.fill();
           text(k, kx + 27, ky + 30, 20, k === '9' ? '#04111d' : C.ink, 800, 'center');
         });
 
-        // Speech bubble
-        const q = seg(time, 2, 3.5);
+        // Speech bubbles visible right away as preview, animating smoothly during playback
+        const q = time === 0 ? 0.92 : seg(time, 0.4, 2.2);
         if (q > 0) {
           ctx.globalAlpha = q;
           rr(480, 240, 660, 130, 22);
@@ -162,7 +164,7 @@
           text('VANI VOICE AGENT (TAMIL / HINDI / 23 LANGS)', 515, 275, 13, C.cyan, 700, 'left', true);
           text('"Vanakkam. Tell me what happened."', 515, 325, 28, C.ink, 700);
         }
-        const r = seg(time, 4.2, 5.5);
+        const r = time === 0 ? 0.78 : seg(time, 2.2, 4.0);
         if (r > 0) {
           ctx.globalAlpha = r;
           rr(480, 410, 660, 140, 22);
@@ -311,15 +313,19 @@
 
     let rafId = null;
 
+    const ICON_PLAY = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+    const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
+
     function setPlaying(v) {
       playing = Boolean(v);
       if (playBtn) {
-        playBtn.textContent = playing ? '⏸' : '▶';
+        playBtn.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
         playBtn.setAttribute('aria-pressed', String(playing));
+        playBtn.setAttribute('aria-label', playing ? 'Pause demo video' : 'Play demo video');
       }
       if (bigBtn) {
         bigBtn.hidden = playing;
-        bigBtn.style.display = playing ? 'none' : '';
+        bigBtn.style.display = playing ? 'none' : 'inline-flex';
       }
       if (rafId) {
         cancelAnimationFrame(rafId);
