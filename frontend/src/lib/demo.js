@@ -386,5 +386,12 @@ export const demoApi = {
   },
 };
 
-export const isDemo = import.meta.env.VITE_DEMO === '1';
+export const isDemo =
+  import.meta.env.VITE_DEMO === '1' ||
+  (typeof window !== 'undefined' && (
+    window.location.hostname.includes('github.io') ||
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    !import.meta.env.VITE_API_URL
+  ));
 export const DEMO = isDemo;

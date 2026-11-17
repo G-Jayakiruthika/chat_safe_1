@@ -12,6 +12,11 @@
       // Single-Page Application redirect for GitHub Pages deep links
       (function() {
         var path = window.location.pathname;
+        // Ensure trailing slash on root repo URL so relative assets resolve correctly
+        if (!path.endsWith('/') && !path.includes('.')) {
+          window.location.replace(path + '/' + window.location.search + window.location.hash);
+          return;
+        }
         var parts = path.split('/').filter(Boolean);
         // If loaded on /<repo>/<subpath> without a hash, redirect to /<repo>/#/<subpath>
         if (parts.length > 1 && !window.location.hash) {

@@ -46,42 +46,52 @@ export default function Aurora() {
 
   useEffect(() => {
     const el = host.current;
+    if (!el) return;
     let renderer;
-    try { renderer = new Renderer({ alpha: false, antialias: false, dpr: Math.min(devicePixelRatio, 1.5) }); } catch { return; }
+    try {
+      renderer = new Renderer({ alpha: false, antialias: false, dpr: Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1, 1.5) });
+      if (!renderer || !renderer.gl || !renderer.gl.canvas) return;
+    } catch {
+      return;
+    }
     const gl = renderer.gl;
-    el.appendChild(gl.canvas);
-    gl.canvas.style.cssText = 'width:100%;height:100%;display:block';
-    const cur = { c0: read('--accent'), c1: read('--a2'), c2: read('--a3'), bg: read('--bg') };
-    target.current = { ...cur };
-    const geometry = new Triangle(gl);
-    const program = new Program(gl, {
-      vertex: VERT, fragment: FRAG,
-      uniforms: { uTime: { value: 0 }, uRes: { value: [1, 1] }, c0: { value: cur.c0 }, c1: { value: cur.c1 }, c2: { value: cur.c2 }, uBg: { value: cur.bg } },
-    });
-    const mesh = new Mesh(gl, { geometry, program });
-    const resize = () => {
-      renderer.setSize(el.offsetWidth || 1, el.offsetHeight || 1);
-      program.uniforms.uRes.value = [gl.canvas.width, gl.canvas.height];
-    };
-    resize(); addEventListener('resize', resize);
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let raf; let last = performance.now(); let t = 0;
-    const loop = (now) => {
-      raf = requestAnimationFrame(loop);
-      const dt = Math.min((now - last) / 1000, 0.05); last = now;
-      if (!reduce) t += dt;
-      const k = Math.min(1, dt * 3);
-      for (const key of ['c0', 'c1', 'c2', 'bg']) cur[key] = lerp(cur[key], target.current[key] || cur[key], k);
-      Object.assign(program.uniforms, {
-        uTime: { value: t }, c0: { value: cur.c0 }, c1: { value: cur.c1 }, c2: { value: cur.c2 }, uBg: { value: cur.bg },
+    try {
+      el.appendChild(gl.canvas);
+      gl.canvas.style.cssText = 'width:100%;height:100%;display:block';
+      const cur = { c0: read('--accent'), c1: read('--a2'), c2: read('--a3'), bg: read('--bg') };
+      target.current = { ...cur };
+      const geometry = new Triangle(gl);
+      const program = new Program(gl, {
+        vertex: VERT, fragment: FRAG,
+        uniforms: { uTime: { value: 0 }, uRes: { value: [1, 1] }, c0: { value: cur.c0 }, c1: { value: cur.c1 }, c2: { value: cur.c2 }, uBg: { value: cur.bg } },
       });
-      renderer.render({ scene: mesh });
-    };
-    raf = requestAnimationFrame(loop);
-    return () => {
-      cancelAnimationFrame(raf); removeEventListener('resize', resize);
-      gl.canvas.remove(); gl.getExtension('WEBGL_lose_context')?.loseContext();
-    };
+      const mesh = new Mesh(gl, { geometry, program });
+      const resize = () => {
+        renderer.setSize(el.offsetWidth || 1, el.offsetHeight || 1);
+        program.uniforms.uRes.value = [gl.canvas.width, gl.canvas.height];
+      };
+      resize(); addEventListener('resize', resize);
+      const reduce = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let raf; let last = performance.now(); let t = 0;
+      const loop = (now) => {
+        raf = requestAnimationFrame(loop);
+        const dt = Math.min((now - last) / 1000, 0.05); last = now;
+        if (!reduce) t += dt;
+        const k = Math.min(1, dt * 3);
+        for (const key of ['c0', 'c1', 'c2', 'bg']) cur[key] = lerp(cur[key], target.current[key] || cur[key], k);
+        Object.assign(program.uniforms, {
+          uTime: { value: t }, c0: { value: cur.c0 }, c1: { value: cur.c1 }, c2: { value: cur.c2 }, uBg: { value: cur.bg },
+        });
+        renderer.render({ scene: mesh });
+      };
+      raf = requestAnimationFrame(loop);
+      return () => {
+        cancelAnimationFrame(raf); removeEventListener('resize', resize);
+        gl.canvas.remove(); gl.getExtension('WEBGL_lose_context')?.loseContext();
+      };
+    } catch (e) {
+      console.warn('Aurora WebGL init failed:', e);
+    }
   }, []);
 
   return <div ref={host} aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 opacity-60 [mask-image:linear-gradient(to_bottom,black,rgba(0,0,0,.55))]" />;

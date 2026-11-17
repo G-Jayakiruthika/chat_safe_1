@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Radar, ScanLine, Users, Flame, Menu, X, Search, Sun, Moon, Settings, Shield, LogOut, Plug, Heart, Mic, Sliders, Globe } from 'lucide-react';
+import { Home, Radar, ScanLine, Users, Flame, Menu, X, Search, Sun, Moon, Settings, Shield, LogOut, Plug, Heart, Mic, Sliders, Globe, Sparkles } from 'lucide-react';
 import { useTheme } from '../lib/theme.jsx';
 import { api } from '../lib/api.js';
 
