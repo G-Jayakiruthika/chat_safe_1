@@ -13,12 +13,12 @@
   <script src="theme.js"></script>
 </head>
 <body data-default-palette="nautilus">
-  <canvas id="bg" class="bg" aria-hidden="true"></canvas>
+  <canvas id="bg" class="bg" aria-label="Animated cyber shield network background"></canvas>
   <a class="skip" href="#main">Skip to main content</a>
 
   <header class="top">
     <a class="brand" href="index.html" aria-label="Chat_Safe home">
-      <img src="icon.svg" alt="" width="40" height="40">
+      <img src="icon.svg" alt="Chat_Safe × Urimai shield logo" width="40" height="40">
       <div>
         <p class="logo">Chat<span>_</span>Safe</p>
         <p class="tagline">8 Scams &amp; Urimai Civic Cases — Sticky Scroll Demo</p>
@@ -32,7 +32,7 @@
       <a href="account.html">Account</a>
     </nav>
     <div class="controls">
-      <button type="button" id="themeToggle" class="icon-btn" aria-label="Switch theme">
+      <button type="button" id="themeToggle" class="icon-btn" aria-label="Switch between bright white mode and dark mode" data-tip="Switch Bright / Dark mode">
         <span class="sun" aria-hidden="true">☀️</span><span class="moon" aria-hidden="true">🌙</span>
       </button>
       <button type="button" id="btn-settings" class="icon-btn" aria-label="Display & accessibility settings" data-tip="Colours, text size & accessibility">⚙</button>
@@ -54,18 +54,22 @@
     <section class="glass panel">
       <p class="eyebrow">TRUESAFE STICKY SCROLL DEMO // 10 REAL-WORLD SCENARIOS</p>
       <h1 style="margin:0 0 .5rem;font-size:clamp(2rem,4.5vw,3.2rem)">8 scams &amp; 2 civic emergencies, decoded.</h1>
-      <p class="muted" style="max-width:65ch">Scroll down on the left to watch the sticky phone on the right update in real time with Kavach's scam verdict or Urimai's civic handoff.</p>
+      <p class="muted" style="max-width:65ch">Scroll, tap any scenario, or press <strong>Page Down / Down Arrow</strong> (or the <strong>↑ / ↓</strong> buttons on the phone) to step through each real-world scam and Urimai civic case.</p>
       <div class="actions">
         <a class="button primary" href="app.html">Open Live Scanner &amp; Speed-Dial 9 →</a>
+        <button type="button" id="demoStartBtn" class="button secondary">↓ Start Stepping Through</button>
       </div>
     </section>
 
     <div class="demo-sticky-grid">
-      <ol id="demoSteps" class="demo-scroll-list"></ol>
-      <aside aria-label="Live phone preview">
+      <ol id="demoSteps" class="demo-scroll-list" aria-label="Scam and civic scenario steps"></ol>
+      <aside class="demo-phone-col" aria-label="Sticky phone verdict preview">
         <div class="demo-sticky-phone" id="demoPhone">
           <div class="demo-notch" aria-hidden="true"></div>
-          <p class="small muted" id="dpSender" style="margin:0">Unknown sender · now</p>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <p class="small muted" id="dpSender" style="margin:0">Unknown sender · now</p>
+            <span class="pill blue" id="dpCounter">01 / 10</span>
+          </div>
           <div class="demo-msg-bubble" id="dpMsg"></div>
           <div class="demo-verdict-box scam" id="dpVerdictBox">
             <p class="eyebrow" id="dpEngine" style="margin:0 0 .25rem">KAVACH VERDICT</p>
@@ -75,7 +79,11 @@
           <div class="actions" style="margin-top:auto">
             <a id="dpTryLink" class="button primary wide" href="app.html">Test this in AI Scanner →</a>
           </div>
-          <p class="small muted" style="text-align:center;margin:0" id="dpFooter">Report on 1930 · cybercrime.gov.in</p>
+          <div class="demo-step-nav">
+            <button type="button" id="dpPrevBtn" class="chip sm" aria-label="Previous scenario">↑ Prev</button>
+            <span class="small muted" id="dpFooter">1930 · cybercrime.gov.in</span>
+            <button type="button" id="dpNextBtn" class="chip sm" aria-label="Next scenario">↓ Next</button>
+          </div>
         </div>
       </aside>
     </div>

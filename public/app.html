@@ -18,7 +18,7 @@
 
   <header class="top">
     <a class="brand" href="index.html" aria-label="Chat_Safe home">
-      <img src="icon.svg" alt="" width="40" height="40">
+      <img src="icon.svg" alt="Chat_Safe × Urimai shield logo" width="40" height="40">
       <div>
         <p class="logo">Chat<span>_</span>Safe</p>
         <p class="tagline" data-i18n="tagline">AI Cyber Guardian &amp; Urimai Civic Engine — 23 Indian Languages</p>
@@ -144,18 +144,22 @@
       </div>
     </section>
 
-    <!-- Primary + Tool Navigation Tabs -->
-    <nav class="tabs reveal" role="tablist" aria-label="Chat_Safe × Urimai Modules">
-      <button role="tab" id="tab-radar" aria-controls="panel-radar" aria-selected="true" data-i18n="tabRadar">📍 Radar &amp; Video News</button>
-      <button role="tab" id="tab-scanner" aria-controls="panel-scanner" aria-selected="false" tabindex="-1" data-i18n="tabScanner">🛡️ AI Scanner</button>
-      <button role="tab" id="tab-family" aria-controls="panel-family" aria-selected="false" tabindex="-1" data-i18n="tabFamily">👨‍👩‍👧 Family Hub <span id="familyBadge" class="pill blue" hidden>1</span></button>
-      <button role="tab" id="tab-streak" aria-controls="panel-streak" aria-selected="false" tabindex="-1" data-i18n="tabStreak">🔥 Daily Streak</button>
-      <button role="tab" id="tab-auto" aria-controls="panel-auto" aria-selected="false" tabindex="-1" data-i18n="tabAuto">🤖 Autopilot</button>
-      <button role="tab" id="tab-pay" aria-controls="panel-pay" aria-selected="false" tabindex="-1" data-i18n="tabPay">✅ Pay-Check</button>
-      <button role="tab" id="tab-paati" aria-controls="panel-paati" aria-selected="false" tabindex="-1" data-i18n="tabPaati">👵 Paati Decoy</button>
-      <button role="tab" id="tab-learn" aria-controls="panel-learn" aria-selected="false" tabindex="-1" data-i18n="tabLearn">🎓 8 Scams</button>
-      <button role="tab" id="tab-google" aria-controls="panel-google" aria-selected="false" tabindex="-1" data-i18n="tabGoogle">☁️ Google &amp; Agents</button>
-    </nav>
+    <!-- Primary + Tool Navigation Tabs (evenly aligned rows) -->
+    <div class="tabs-stack reveal" role="tablist" aria-label="Chat_Safe × Urimai Modules">
+      <div class="tabs tabs-primary">
+        <button role="tab" id="tab-radar" aria-controls="panel-radar" aria-selected="true" data-i18n="tabRadar">📍 Radar &amp; Video News</button>
+        <button role="tab" id="tab-scanner" aria-controls="panel-scanner" aria-selected="false" tabindex="-1" data-i18n="tabScanner">🛡️ AI Scanner</button>
+        <button role="tab" id="tab-family" aria-controls="panel-family" aria-selected="false" tabindex="-1" data-i18n="tabFamily">👨‍👩‍👧 Family Hub <span id="familyBadge" class="pill blue" hidden>1</span></button>
+        <button role="tab" id="tab-streak" aria-controls="panel-streak" aria-selected="false" tabindex="-1" data-i18n="tabStreak">🔥 Daily Streak</button>
+      </div>
+      <div class="tabs tabs-tools">
+        <button role="tab" id="tab-auto" aria-controls="panel-auto" aria-selected="false" tabindex="-1" data-i18n="tabAuto">🤖 Autopilot</button>
+        <button role="tab" id="tab-pay" aria-controls="panel-pay" aria-selected="false" tabindex="-1" data-i18n="tabPay">✅ Pay-Check</button>
+        <button role="tab" id="tab-paati" aria-controls="panel-paati" aria-selected="false" tabindex="-1" data-i18n="tabPaati">👵 Paati Decoy</button>
+        <button role="tab" id="tab-learn" aria-controls="panel-learn" aria-selected="false" tabindex="-1" data-i18n="tabLearn">🎓 8 Scams</button>
+        <button role="tab" id="tab-google" aria-controls="panel-google" aria-selected="false" tabindex="-1" data-i18n="tabGoogle">☁️ Google &amp; Agents</button>
+      </div>
+    </div>
 
     <!-- ==================== TAB 1: RADAR & VIDEO NEWS REELS ==================== -->
     <section id="panel-radar" role="tabpanel" aria-labelledby="tab-radar" class="panel glass">
@@ -381,9 +385,9 @@
             <p class="small muted" style="margin:0">Snap or pick a photo of the broken pipe/road. Urimai embeds it directly into the legal PDF.</p>
             <label class="button secondary" style="cursor:pointer">
               Choose / Snap Photo
-              <input type="file" id="fhPhotoInput" accept="image/jpeg,image/png" class="sr-only">
+              <input type="file" id="fhPhotoInput" accept="image/jpeg,image/png" class="sr-only" aria-label="Upload a JPEG or PNG photo of the broken water pipe, road, or streetlight">
             </label>
-            <img id="fhPhotoPreview" class="kit-photo-preview" alt="Uploaded evidence photo" hidden>
+            <img id="fhPhotoPreview" class="kit-photo-preview" alt="Uploaded street or civic issue evidence photo to embed inside your Urimai PDF" hidden>
             <p id="fhPhotoStatus" class="small muted" style="margin:0"></p>
           </div>
 

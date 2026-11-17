@@ -10,12 +10,11 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="palettes.css">
-  <link rel="stylesheet" href="explainer.css">
   <link rel="stylesheet" href="landing.css">
   <script src="theme.js"></script>
 </head>
 <body class="landing" data-default-palette="mantis">
-  <!-- Preloader (Chat_Safe shield + SkillForge percentage & scramble) -->
+  <!-- Preloader -->
   <div id="boot" class="boot" aria-hidden="true">
     <svg class="boot-shield" viewBox="0 0 64 72" fill="none" aria-hidden="true">
       <path class="boot-draw" d="M32 3 59 13v26c0 17-11 28-27 33C16 67 5 56 5 39V13Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
@@ -23,34 +22,34 @@
     </svg>
     <div class="boot-pct" id="bootPct">0%</div>
     <div class="boot-label" id="bootLabel">IGNITING KAVACH × URIMAI</div>
-    <div class="boot-bar"><span id="bootBar"></span></div>
+    <div class="boot-bar"><span></span></div>
   </div>
 
-  <canvas id="morph" class="bg" aria-hidden="true"></canvas>
+  <canvas id="morph" class="bg" aria-label="Animated 3D security and civic particle background"></canvas>
   <a class="skip" href="#main">Skip to main content</a>
 
   <header class="top landing-top">
-    <a class="brand" href="index.html" aria-label="Chat_Safe home" data-tip="Chat_Safe × Urimai Home">
-      <img src="icon.svg" alt="" width="36" height="36">
+    <a class="brand" href="index.html" aria-label="Chat_Safe × Urimai home" data-tip="Chat_Safe × Urimai Home">
+      <img src="icon.svg" alt="Chat_Safe × Urimai shield logo" width="36" height="36">
       <p class="logo">Chat<span>_</span>Safe</p>
     </a>
-    <nav class="mainnav" aria-label="Sections">
+    <nav class="mainnav" aria-label="Primary sections">
+      <a href="#heroTop">Demo Video</a>
       <a href="#how">How it works</a>
       <a href="#urimai">Urimai O2O</a>
-      <a href="#watch">Video</a>
       <a href="#agents">AI Agents</a>
       <a href="#eyes">Kavach</a>
       <a href="demo.html">8 Scams Demo</a>
       <a href="#languages">23 Languages</a>
-      <a href="connect.html">Connect apps</a>
+      <a href="connect.html">Connect Apps</a>
     </nav>
     <div class="controls">
-      <button type="button" id="themeToggle" class="icon-btn" aria-label="Switch theme" data-tip="Switch dark / light theme">
+      <button type="button" id="themeToggle" class="icon-btn" aria-label="Switch between bright white mode and dark mode" data-tip="Switch Bright / Dark mode">
         <span class="sun" aria-hidden="true">☀️</span><span class="moon" aria-hidden="true">🌙</span>
       </button>
-      <button type="button" id="btn-settings" class="icon-btn" aria-label="Display & accessibility settings" data-tip="Colours, text size, minimalist style & accessibility">⚙</button>
+      <button type="button" id="btn-settings" class="icon-btn" aria-label="Open display, colour palette, and accessibility settings" data-tip="Colours, text size, minimalist style & accessibility">⚙</button>
       <div class="cursor-picker">
-        <button type="button" id="btn-cursor" class="icon-btn" aria-label="Choose cursor style" data-tip="Choose cursor style">✦</button>
+        <button type="button" id="btn-cursor" class="icon-btn" aria-label="Choose interactive cursor style" data-tip="Choose cursor style">✦</button>
         <div class="cursor-menu glass" id="cursor-menu" hidden>
           <div class="menu-title">Cursor style</div>
           <button type="button" data-mode="orb">◎ Orbit ring</button>
@@ -64,35 +63,47 @@
     </div>
   </header>
 
-  <!-- Wordless explainer, plays by itself right under the menu -->
-  <section class="explainer-band" aria-labelledby="exTitle">
-    <h2 id="exTitle" class="sr-only">How Chat_Safe protects you, in pictures</h2>
-    <div id="explainer" class="explainer"></div>
-  </section>
-
   <!-- HUD: section counter, ruler and scroll % -->
   <div class="hud-rail" aria-hidden="true">
-    <span id="hudIndex" class="mono">0001 / 0011</span>
+    <span id="hudIndex" class="mono">0001 / 0010</span>
     <span class="ruler">+++++×++++</span>
     <span id="hudName" class="mono">GLOBE</span>
   </div>
   <div class="hud-progress mono" aria-hidden="true">
     <b id="hudNum">01</b>
-    <span id="hudTotal">/ 11</span>
+    <span id="hudTotal">/ 10</span>
     <span class="next" id="hudNext">NEXT ↓</span>
   </div>
 
   <main id="main">
-    <section class="stage hero" data-palette-name="mantis" data-shape="globe" aria-labelledby="heroTitle">
-      <p class="eyebrow">VERSION 3.0 // KAVACH × URIMAI // MADE FOR BHARAT</p>
-      <h1 id="heroTitle" class="mega">Stop the scam <em>before</em> the money moves.</h1>
-      <p class="lead">One voice call on <strong>Speed-Dial 9</strong> in <strong>23 Indian languages</strong>. <strong>Kavach</strong> stops cyber fraud &amp; drafts 1930 complaints; <strong>Urimai</strong> turns spoken village civic complaints into bilingual PDF petitions, CM Helpline filings &amp; Local Proxy WhatsApp kits.</p>
-      <div class="actions">
-        <a class="button primary big" href="app.html">🎙️ Launch Kavach × Urimai</a>
-        <a class="button secondary big" href="demo.html">📱 8 Scams Sticky Demo</a>
-        <a class="button secondary big" href="#watch">▶ Watch 60s Video</a>
+    <!-- Hero + Good-looking Interactive Demo Video Right at the Top -->
+    <section id="heroTop" class="stage hero" data-palette-name="mantis" data-shape="globe" aria-labelledby="heroTitle">
+      <div class="hero-split">
+        <div>
+          <p class="eyebrow">VERSION 3.0 // KAVACH × URIMAI // MADE FOR BHARAT</p>
+          <h1 id="heroTitle" class="mega">Stop the scam <em>before</em> the money moves.</h1>
+          <p class="lead">One voice call on <strong>Speed-Dial 9</strong> in <strong>23 Indian languages</strong>. <strong>Kavach</strong> stops cyber fraud &amp; drafts 1930 complaints; <strong>Urimai</strong> turns spoken village civic issues into bilingual PDFs, CM Helpline filings &amp; Local Proxy WhatsApp kits.</p>
+          <div class="actions">
+            <a class="button primary big" href="app.html">🎙️ Launch Kavach × Urimai</a>
+            <a class="button secondary big" href="demo.html">📱 8 Scams Sticky Demo</a>
+          </div>
+        </div>
+
+        <!-- Top Cinematic 60-Second Interactive Demo Video Player -->
+        <div class="video-player glass" id="videoPlayer" aria-label="Interactive 60-second product walkthrough video">
+          <canvas id="videoExplainer" width="1280" height="720" role="img" aria-label="Animated 60-second walkthrough showing Speed-Dial 9 voice call, Gemini Scam vs Urimai Civic routing, Family Hub photo PDF, and CM Portal bypass"></canvas>
+          <div class="player-caption" id="playerCaption">Press Play to watch how Speed-Dial '9' triggers Kavach &amp; Urimai in 60 seconds.</div>
+          <button type="button" class="player-big-play" id="playerBig" aria-label="Play 60-second demo video">▶</button>
+          <div class="player-controls">
+            <button type="button" class="icon-btn" id="playerPlay" aria-label="Play or pause demo video">▶</button>
+            <div class="player-track" id="playerTrack" role="slider" aria-label="Video timeline" tabindex="0"><div class="player-fill" id="playerFill"></div><div class="player-chapters" id="playerChapters"></div></div>
+            <span class="player-time" id="playerTime">0:00 / 1:00</span>
+            <button type="button" class="icon-btn" id="playerRec" aria-label="Download demo video as WebM" data-tip="Save demo as .webm video">⤓</button>
+            <button type="button" class="icon-btn" id="playerFs" aria-label="Toggle fullscreen video">⛶</button>
+          </div>
+        </div>
       </div>
-      <p class="scroll-cue mono">SCROLL ↓</p>
+      <p class="scroll-cue mono">SCROLL ↓ TO EXPLORE</p>
     </section>
 
     <div class="ticker" aria-label="Scams and civic issues Chat_Safe handles">
@@ -129,7 +140,7 @@
         </ol>
 
         <div class="demo-stage-visual">
-          <div class="phone-3d">
+          <div class="phone-3d" role="img" aria-label="3D smartphone preview showing Speed-Dial 9 listening, Gemini intent classification, and Family Hub action kit">
             <div class="phone-screen">
               <div class="ps ps-0">
                 <p class="ps-head">📞 Speed-Dial 9 · Listening</p>
@@ -140,8 +151,8 @@
               <div class="ps ps-1">
                 <p class="ps-head">Gemini Intent Router</p>
                 <div class="ps-gauge">92</div>
-                <p class="ps-line bad">SCAM -> Kavach Red + 1930</p>
-                <p class="ps-line ok">CIVIC -> Urimai Blue + Kit</p>
+                <p class="ps-line bad">SCAM → Kavach Red + 1930</p>
+                <p class="ps-line ok">CIVIC → Urimai Blue + Kit</p>
               </div>
               <div class="ps ps-2">
                 <p class="ps-head">Family Hub Ready</p>
@@ -181,56 +192,38 @@
       </div>
     </section>
 
-    <!-- 60-Second Interactive Video Explainer -->
-    <section id="watch" class="stage" data-palette-name="bluedragon" data-shape="shield" aria-labelledby="watchTitle">
-      <p class="eyebrow">04 // 60-SECOND INTERACTIVE EXPLAINER</p>
-      <h2 id="watchTitle" class="big-title">Watch Kavach × Urimai think in real time.</h2>
-      <div class="video-player glass reveal-on-scroll" id="videoPlayer">
-        <canvas id="videoExplainer" width="1280" height="720" aria-label="60-second animated explainer video"></canvas>
-        <div class="player-caption" id="playerCaption">Press Play to watch the 6-chapter Kavach × Urimai walkthrough.</div>
-        <button type="button" class="player-big-play" id="playerBig" aria-label="Play video explainer">▶</button>
-        <div class="player-controls">
-          <button type="button" class="icon-btn" id="playerPlay" aria-label="Play or pause">▶</button>
-          <div class="player-track" id="playerTrack"><div class="player-fill" id="playerFill"></div><div class="player-chapters" id="playerChapters"></div></div>
-          <span class="player-time" id="playerTime">0:00 / 1:00</span>
-          <button type="button" class="icon-btn" id="playerRec" data-tip="Save explainer as .webm video">⤓</button>
-          <button type="button" class="icon-btn" id="playerFs" aria-label="Fullscreen">⛶</button>
-        </div>
-      </div>
-    </section>
-
     <!-- 8 AI Agents Squad -->
     <section id="agents" class="stage" data-palette-name="jellyfish" data-shape="ring" aria-labelledby="agentsTitle">
-      <p class="eyebrow">05 // MULTI-AGENT ORCHESTRATION + GOOGLE STACK</p>
+      <p class="eyebrow">04 // MULTI-AGENT ORCHESTRATION + GOOGLE STACK</p>
       <h2 id="agentsTitle" class="big-title">Eight specialized AI agents on one bus.</h2>
       <p class="lead">Hover or tap any agent avatar to see how Gemini 2.5 Flash, Web Speech, Google Maps location routing, and Safe Browsing heuristics collaborate.</p>
       <div id="agentGrid" class="agent-grid"></div>
     </section>
 
     <section id="eyes" class="stage" data-palette-name="nautilus" data-shape="eye" aria-labelledby="eyesTitle">
-      <p class="eyebrow">06 // MEET KAVACH</p>
+      <p class="eyebrow">05 // MEET KAVACH</p>
       <h2 id="eyesTitle" class="big-title">Read the danger in its eyes.</h2>
       <p class="lead">No reading needed. Kavach's 3D eyes shift colour with threat &amp; civic mode — red for scams, royal blue for Urimai civic petitions.</p>
       <ul class="eye-row">
-        <li class="reveal-on-scroll"><canvas data-mood="idle" aria-hidden="true"></canvas><strong>Calm</strong><span>Ready to help</span></li>
-        <li class="reveal-on-scroll"><canvas data-mood="safe" aria-hidden="true"></canvas><strong>Happy</strong><span>Safe message</span></li>
-        <li class="reveal-on-scroll"><canvas data-mood="civic" aria-hidden="true"></canvas><strong>Urimai Blue</strong><span>Civic petition ready</span></li>
-        <li class="reveal-on-scroll"><canvas data-mood="suspicious" aria-hidden="true"></canvas><strong>Squint</strong><span>Suspicious — verify</span></li>
-        <li class="reveal-on-scroll"><canvas data-mood="critical" aria-hidden="true"></canvas><strong>Furious</strong><span>Scam — hang up!</span></li>
+        <li class="reveal-on-scroll"><canvas data-mood="idle" role="img" aria-label="Kavach calm cyan eyes meaning ready to help"></canvas><strong>Calm</strong><span>Ready to help</span></li>
+        <li class="reveal-on-scroll"><canvas data-mood="safe" role="img" aria-label="Kavach happy green eyes meaning safe message"></canvas><strong>Happy</strong><span>Safe message</span></li>
+        <li class="reveal-on-scroll"><canvas data-mood="civic" role="img" aria-label="Kavach blue eyes meaning Urimai civic petition ready"></canvas><strong>Urimai Blue</strong><span>Civic petition ready</span></li>
+        <li class="reveal-on-scroll"><canvas data-mood="suspicious" role="img" aria-label="Kavach squinting amber eyes meaning verify carefully"></canvas><strong>Squint</strong><span>Suspicious — verify</span></li>
+        <li class="reveal-on-scroll"><canvas data-mood="critical" role="img" aria-label="Kavach furious red eyes meaning scam hang up immediately"></canvas><strong>Furious</strong><span>Scam — hang up!</span></li>
       </ul>
     </section>
 
     <section id="scamtypes" class="stage" data-palette-name="anemone" data-shape="lock" aria-labelledby="typesTitle">
-      <p class="eyebrow">07 // THE 8 SCAMS</p>
+      <p class="eyebrow">06 // THE 8 SCAMS</p>
       <h2 id="typesTitle" class="big-title">Know all eight. Tap any card.</h2>
       <p class="lead">Or open our dedicated <a href="demo.html">Sticky Scroll 3D Phone Demo</a> to walk through all eight step-by-step.</p>
       <div id="typeGrid" class="type-grid"></div>
     </section>
 
     <section id="languages" class="stage" data-palette-name="jellyfish" data-shape="ring" aria-labelledby="langTitle">
-      <p class="eyebrow">08 // EVERY LANGUAGE OF THE EIGHTH SCHEDULE</p>
+      <p class="eyebrow">07 // EVERY LANGUAGE OF THE EIGHTH SCHEDULE</p>
       <h2 id="langTitle" class="big-title">23 Indian languages. One guardian.</h2>
-      <ul class="lang-cloud" aria-label="Supported languages">
+      <ul class="lang-cloud" aria-label="Supported Indian languages">
         <li>English</li><li lang="as">অসমীয়া</li><li lang="bn">বাংলা</li><li lang="brx">बड़ो</li><li lang="doi">डोगरी</li><li lang="gu">ગુજરાતી</li>
         <li lang="hi">हिन्दी</li><li lang="kn">ಕನ್ನಡ</li><li lang="ks" dir="rtl">کٲشُر</li><li lang="kok">कोंकणी</li><li lang="mai">मैथिली</li><li lang="ml">മലയാളം</li>
         <li lang="mni">ꯃꯤꯇꯩꯂꯣꯟ</li><li lang="mr">मराठी</li><li lang="ne">नेपाली</li><li lang="or">ଓଡ଼ିଆ</li><li lang="pa">ਪੰਜਾਬੀ</li><li lang="sa">संस्कृतम्</li>
@@ -240,7 +233,7 @@
     </section>
 
     <section id="faq" class="stage" data-palette-name="anemone" data-shape="shield" aria-labelledby="faqTitle">
-      <p class="eyebrow">09 // QUESTIONS</p>
+      <p class="eyebrow">08 // QUESTIONS</p>
       <h2 id="faqTitle" class="big-title">FAQ</h2>
       <div class="faq">
         <details><summary>How does a keypad-phone elder trigger Urimai?</summary><p>They speed-dial '9' and speak in their mother tongue. Gemini classifies Scam (Kavach) vs Civic (Urimai) and sends an Actionable Kit to their child's web dashboard.</p></details>
@@ -251,7 +244,7 @@
     </section>
 
     <section class="stage cta" data-palette-name="mantis" data-shape="eye" aria-labelledby="ctaTitle">
-      <p class="eyebrow">10 // READY FOR BHARAT</p>
+      <p class="eyebrow">09 // READY FOR BHARAT</p>
       <h2 id="ctaTitle" class="mega">Kavach × Urimai is watching out for your family.</h2>
       <div class="phones" aria-hidden="true">
         <div class="phone"><div class="screen"><span class="bubble you">CBI digital arrest…</span><span class="bubble bad">🔴 SCAM — Hang up &amp; call 1930</span><span class="bubble ok">SOS sent to Family</span></div></div>
@@ -273,7 +266,6 @@
   <script src="sound.js" defer></script>
   <script src="icons.js" defer></script>
   <script src="scamtypes.js" defer></script>
-  <script src="explainer.js" defer></script>
   <script src="videoExplainer.js" defer></script>
   <script src="avatar.js" defer></script>
   <script src="agentAvatars.js" defer></script>

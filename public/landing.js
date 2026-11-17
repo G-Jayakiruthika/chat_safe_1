@@ -19,14 +19,14 @@
     const boot = $('boot');
     if (!boot) return;
     const pctEl = $('bootPct');
-    const barEl = $('bootBar');
+    const barEl = document.querySelector('#boot .boot-bar span');
     const labelEl = $('bootLabel');
     const targetText = 'IGNITING KAVACH × URIMAI';
     const glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789×';
     let pct = 0;
 
     const timer = setInterval(() => {
-      pct = Math.min(100, pct + (reducedMotion ? 50 : 7));
+      pct = Math.min(100, pct + (reducedMotion ? 50 : 8));
       if (pctEl) pctEl.textContent = `${pct}%`;
       if (barEl) barEl.style.width = `${pct}%`;
       if (labelEl && !reducedMotion) {
@@ -42,17 +42,12 @@
         setTimeout(() => {
           boot.classList.add('done');
           setTimeout(() => boot.remove(), 700);
-        }, reducedMotion ? 50 : 280);
+        }, reducedMotion ? 50 : 220);
       }
-    }, reducedMotion ? 30 : 48);
+    }, reducedMotion ? 30 : 40);
   })();
 
-  /* ---------- Wordless 3-panel explainer ---------- */
-  if (window.createExplainer && $('explainer')) {
-    window.createExplainer($('explainer'), { reducedMotion });
-  }
-
-  /* ---------- 60-Second Interactive Video Explainer ---------- */
+  /* ---------- 60-Second Interactive Video Explainer (Hero Top) ---------- */
   if (window.createVideoExplainer && $('videoExplainer')) {
     window.createVideoExplainer({
       canvas: $('videoExplainer'),

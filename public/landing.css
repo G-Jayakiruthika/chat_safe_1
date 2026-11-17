@@ -1,9 +1,9 @@
 /* ---------- Landing page (scroll story) ---------- */
 .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; letter-spacing: .14em; text-transform: uppercase; }
 .eyebrow { font: 700 .78rem/1.4 ui-monospace, Consolas, monospace; letter-spacing: .2em; color: var(--accent); margin: 0 0 1rem; }
-.landing main { max-width: 1200px; }
-.landing-top { background: transparent; border-bottom-color: transparent; backdrop-filter: blur(8px); }
-.landing-top .logo { font-size: 1.3rem; }
+.landing main { max-width: 1160px; margin: 0 auto; padding-inline: clamp(1rem, 4vw, 2.5rem); }
+.landing-top { background: var(--glass); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+.landing-top .logo { font-size: 1.35rem; }
 
 /* HUD rail */
 .hud-rail {
@@ -21,11 +21,15 @@
 
 @media (max-width: 900px) { .hud-rail { display: none; } }
 
-/* Stages */
-.stage { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 6rem 0 4rem; max-width: 640px; }
-.stage.cta, #features, #how, #eyes, .stage:has(.stories), #faq { max-width: none; }
-.hero { padding-top: 8rem; }
-.mega { font-size: clamp(2.6rem, 7vw, 5.4rem); line-height: 1.02; margin: 0 0 1.25rem; letter-spacing: -.02em; }
+/* Stages — consistent, balanced alignment across the entire landing story */
+.stage { min-height: 82vh; display: flex; flex-direction: column; justify-content: center; padding: 4.5rem 0 3.5rem; width: 100%; max-width: 1080px; margin-inline: auto; }
+.stage.cta, #features, #how, #eyes, .stage:has(.stories), #faq, #urimai, #watch, #agents, #scamtypes, #languages { max-width: 1080px; }
+.hero { padding-top: 2.5rem; min-height: auto; }
+.hero-split {
+  display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 2rem; align-items: center;
+}
+@media (max-width: 960px) { .hero-split { grid-template-columns: 1fr; } }
+.mega { font-size: clamp(2.3rem, 5.5vw, 4.4rem); line-height: 1.04; margin: 0 0 1.1rem; letter-spacing: -.02em; }
 .mega em, .beat em { font-style: normal; background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .big-title { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; margin: 0 0 1.5rem; letter-spacing: -.01em; }
 .lead { font-size: clamp(1.05rem, 2vw, 1.3rem); color: var(--muted); max-width: 60ch; }
@@ -55,25 +59,25 @@
 .step h3, .feature h3 { margin: .4rem 0; }
 .step p, .feature p, .story p { color: var(--muted); margin: 0; }
 
-.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; max-width: 760px; }
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; width: 100%; }
 .feature span { font-size: 1.8rem; }
 .feature { transition: transform .3s, border-color .3s; }
 .feature:hover { transform: translateY(-4px); border-color: var(--accent); }
 
 /* Eye showcase */
-.eye-row { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; max-width: 760px; }
+.eye-row { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; width: 100%; }
 .eye-row li { display: grid; justify-items: center; gap: .25rem; text-align: center; background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem .5rem; }
 .eye-row canvas { width: 100%; max-width: 150px; aspect-ratio: 1.4; }
 .eye-row span { color: var(--muted); font-size: .85rem; }
 
 /* Languages */
-.lang-cloud { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; max-width: 640px; }
+.lang-cloud { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .55rem; width: 100%; }
 .lang-cloud li { padding: .45rem .9rem; border-radius: 999px; border: 1px solid var(--border); background: var(--glass); font-size: 1.05rem; animation: float 6s ease-in-out infinite; }
 .lang-cloud li:nth-child(3n) { animation-delay: -2s; } .lang-cloud li:nth-child(3n+1) { animation-delay: -4s; }
 
 /* Stories */
-.stories { display: grid; gap: 1rem; max-width: 760px; }
-.story:nth-child(even) { margin-left: clamp(0rem, 6vw, 4rem); }
+.stories { display: grid; gap: 1rem; width: 100%; }
+.story:nth-child(even) { margin-left: clamp(0rem, 4vw, 2.5rem); }
 .story-tag { color: var(--critical); font-size: .75rem; margin: 0; }
 .story h3 { margin: .3rem 0 .5rem; }
 .metrics { display: flex; gap: 1.5rem; margin: .9rem 0 0; flex-wrap: wrap; }
@@ -81,7 +85,7 @@
 .metrics dd { margin: 0; font-weight: 800; color: var(--accent); }
 
 /* FAQ */
-.faq { display: grid; gap: .6rem; max-width: 760px; }
+.faq { display: grid; gap: .6rem; width: 100%; }
 .faq details { background: var(--glass); border: 1px solid var(--border); border-radius: 14px; padding: .2rem 1.1rem; }
 .faq summary { cursor: pointer; font-weight: 700; padding: .8rem 0; list-style: none; }
 .faq summary::after { content: "+"; float: right; color: var(--accent); font-weight: 800; transition: transform .25s; }
@@ -211,16 +215,13 @@
 @keyframes card-in { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
 
 
-/* Landing header must stay on one row — it sits above the explainer */
-.landing-top { gap: .75rem; flex-wrap: nowrap; }
-.landing-top .mainnav { flex: 1; justify-content: center; gap: .1rem; min-width: 0; }
-.landing-top .mainnav a { font-size: .74rem; padding: .4rem .5rem; letter-spacing: .04em; }
-.landing-top .controls { flex: 0 0 auto; flex-wrap: nowrap; }
-@media (max-width: 1100px) { .landing-top .mainnav a:nth-child(n+5) { display: none; } }
-@media (max-width: 860px) {
-  .landing-top { flex-wrap: wrap; }
-  .landing-top .mainnav { order: 3; width: 100%; justify-content: flex-start; overflow-x: auto; }
-  .landing-top .mainnav a:nth-child(n+5) { display: inline-block; }
+/* Top landing header — cleanly aligned, never clips or breaks into jagged tabs */
+.landing-top { gap: .65rem 1rem; flex-wrap: wrap; }
+.landing-top .mainnav { flex: 1 1 auto; justify-content: center; gap: .2rem; min-width: 0; }
+.landing-top .mainnav a { font-size: .76rem; padding: .4rem .62rem; letter-spacing: .04em; }
+.landing-top .controls { flex: 0 0 auto; flex-wrap: nowrap; gap: .45rem; }
+@media (max-width: 980px) {
+  .landing-top .mainnav { order: 3; width: 100%; justify-content: flex-start; overflow-x: auto; padding-bottom: .2rem; }
 }
 
 
