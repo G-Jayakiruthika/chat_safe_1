@@ -4,9 +4,9 @@
  * Service worker: makes Chat_Safe installable (needed for the Android "Share → Chat_Safe"
  * target) and keeps the app shell available offline. API calls are never cached.
  */
-const CACHE = 'chatsafe-v3.6';
+const CACHE = 'chatsafe-v3.7';
 const SHELL = [
-  './', 'index.html', 'app.html', 'demo.html', 'proxy.html', 'connect.html', 'account.html',
+  './', 'index.html', 'app.html', 'demo.html', 'proxy.html', 'connect.html', 'account.html', 'privacy.html',
   'styles.css', 'landing.css', 'palettes.css',
   'theme.js', 'i18n.js', 'api.js', 'history.js', 'sound.js', 'fx.js', 'avatar.js', 'agentAvatars.js',
   'videoExplainer.js', 'videoReels.js', 'pdf.js', 'app.js', 'demo.js', 'proxy.js',

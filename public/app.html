@@ -160,6 +160,7 @@
         <button role="tab" id="tab-paati" aria-controls="panel-paati" aria-selected="false" tabindex="-1" data-i18n="tabPaati">👵 Paati Decoy</button>
         <button role="tab" id="tab-learn" aria-controls="panel-learn" aria-selected="false" tabindex="-1" data-i18n="tabLearn">🎓 8 Scams</button>
         <button role="tab" id="tab-google" aria-controls="panel-google" aria-selected="false" tabindex="-1" data-i18n="tabGoogle">☁️ Google &amp; Agents</button>
+        <button role="tab" id="tab-privacy" aria-controls="panel-privacy" aria-selected="false" tabindex="-1">🔒 Data Privacy (ISO)</button>
       </div>
     </div>
 
@@ -612,6 +613,72 @@
       <h3 style="margin:1.5rem 0 .4rem">🤖 Meet the 8 AI Agents</h3>
       <div id="appAgentGrid" class="agent-grid"></div>
     </section>
+
+    <!-- ==================== TAB 10: ISO/IEC 27701 DATA PRIVACY & USER VAULT ==================== -->
+    <section id="panel-privacy" role="tabpanel" aria-labelledby="tab-privacy" class="panel glass" hidden>
+      <p class="eyebrow" style="margin:0">TAB 10 // ISO/IEC 27001 &amp; 27701 · DPDP ACT 2023 GOVERNANCE</p>
+      <h2 style="margin:.2rem 0 .45rem">Data Privacy Center, User Registry &amp; Legal Compliance</h2>
+      <p class="muted">We practice strict <strong>data minimization</strong>: only the fields below are stored (passwords hashed via <strong>Argon2id</strong>, city optionally encrypted with AES-256-GCM, and zero third-party ad trackers).</p>
+
+      <div class="iso-grid">
+        <form id="privacyProfileForm" class="google-card" novalidate style="display:grid;gap:.65rem">
+          <h3 style="margin:0">📝 Verified Citizen Info &amp; Consent Vault</h3>
+          <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <label for="privName" class="small">Full Name (Required)</label>
+          <input id="privName" name="name" maxlength="60" required autocomplete="name" placeholder="e.g., Meenakshi Sundaram">
+          <label for="privEmail" class="small">Email Address (Required)</label>
+          <input id="privEmail" name="email" type="email" maxlength="254" required autocomplete="email" placeholder="citizen@example.in">
+          <label for="privCity" class="small">City / Municipal Ward (Optional — for Urimai Petitions)</label>
+          <input id="privCity" name="city" maxlength="80" placeholder="e.g., Ward 12, Coimbatore">
+          <label for="privPass" class="small">Account Passphrase (8+ chars, hashed with Argon2id on server)</label>
+          <input id="privPass" name="password" type="password" minlength="8" maxlength="200" autocomplete="new-password" placeholder="Minimum 8 characters">
+
+          <label class="consent-check">
+            <input type="checkbox" id="privPolicyConsent" required>
+            <span>I agree to the <a href="privacy.html#privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>, <a href="privacy.html#terms-of-service" target="_blank" rel="noopener">Terms of Service</a> &amp; <a href="privacy.html#refund-policy" target="_blank" rel="noopener">₹0 Free / Refund Policy</a>.</span>
+          </label>
+          <label class="consent-check">
+            <input type="checkbox" id="privAgeConsent" required>
+            <span><strong>Age Verification:</strong> I confirm I am 18+ years old, OR I am submitting with verifiable parent/guardian consent for a minor.</span>
+          </label>
+          <label class="consent-check">
+            <input type="checkbox" id="privAlertsOptIn">
+            <span>Optional: Receive scam radar digests (1-click unsubscribe anytime — unchecked by default, no dark patterns).</span>
+          </label>
+
+          <div class="actions" style="margin:.2rem 0 0">
+            <button type="submit" class="primary">💾 Save Encrypted Profile &amp; Consent</button>
+          </div>
+          <p id="privacyFormStatus" class="status" role="status" aria-live="polite" style="margin:0"></p>
+        </form>
+
+        <div class="google-card" style="display:grid;gap:.7rem;align-content:start">
+          <h3 style="margin:0">🛡️ Your ISO 27701 Rights &amp; Audits</h3>
+          <p class="small muted" style="margin:0">Exercise Access, Portability, Opt-Out, or Permanent Erasure anytime:</p>
+          <div class="actions" style="margin:0">
+            <button type="button" id="privacyExportBtn" class="secondary">⬇ Export My Data (JSON)</button>
+            <button type="button" id="privacyUnsubBtn" class="secondary">🔕 Unsubscribe Alerts</button>
+            <button type="button" id="privacyDeleteBtn" class="danger">🗑️ Delete Account &amp; Erase Data</button>
+          </div>
+          <p id="privacyRightsStatus" class="small muted" role="status" aria-live="polite" style="margin:0"></p>
+
+          <details>
+            <summary><strong>Privacy, Terms, Refund (₹0 Free) &amp; Cookie Policy</strong></summary>
+            <p class="small" style="margin:.45rem 0">100% Free Citizen Service — ₹0 fees, zero hidden charges, zero fake reviews. Optional future partner services carry a 7-day 100% refund guarantee. Strict security cookies only (`cs_session` HttpOnly, `cs_csrf` SameSite=Strict).</p>
+          </details>
+          <details>
+            <summary><strong>Security Controls &amp; Third-Party / Asset Audit</strong></summary>
+            <ul class="small" style="margin:.4rem 0 0;padding-left:1.2rem">
+              <li>Argon2id password hashing + 15-min expiring SHA-256 reset tokens.</li>
+              <li>Parameterized SQLite WAL (`busy_timeout=5000`) + CSRF + CORS + Rate Limits + Overload Shedding (`503`).</li>
+              <li>Zero ad/analytics SDKs; all icons &amp; Canvas visuals are original/licensed (`icon.svg`).</li>
+              <li>Business Contact: Chat_Safe × Urimai Initiative, Coimbatore · <code>privacy@chatsafe.in</code>.</li>
+            </ul>
+          </details>
+          <a class="button secondary sm" href="privacy.html">📄 Open Full Legal &amp; Compliance Page</a>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- Search Bar & Case Files Drawer -->
@@ -653,10 +720,18 @@
     <button type="button" id="closeHelp" class="primary" style="margin-top:.8rem">Close</button>
   </dialog>
 
+  <div id="cookieConsentBanner" class="cookie-banner" role="region" aria-label="Cookie preferences" hidden>
+    <p><strong>🍪 Cookie &amp; Privacy Notice (No Dark Patterns):</strong> Chat_Safe uses strictly necessary security cookies (<code>cs_session</code>, <code>cs_csrf</code>). Optional UI preferences (theme/streak) are saved locally only with your choice. <a href="privacy.html#cookie-policy">Cookie Policy</a></p>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button type="button" id="cookieEssentialBtn" class="secondary sm">Essential Only</button>
+      <button type="button" id="cookieAcceptBtn" class="primary sm">Accept Essential + Preferences</button>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <footer class="foot">
-    <p>Chat_Safe × Urimai · <a href="index.html">Home</a> · <a href="demo.html">8 Scams Demo</a> · Emergency: <a href="tel:1930">1930</a> · <a href="tel:112">112</a></p>
+    <p>Chat_Safe × Urimai · <a href="index.html">Home</a> · <a href="demo.html">8 Scams Demo</a> · <a href="privacy.html">Privacy, Terms &amp; Refund Policy</a> · <button type="button" id="openCookiePrefsBtn" class="linkbtn">🍪 Cookie Preferences</button> · Emergency: <a href="tel:1930">1930</a> · <a href="tel:112">112</a></p>
   </footer>
 
   <script src="i18n.js" defer></script>

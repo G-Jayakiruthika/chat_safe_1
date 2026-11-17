@@ -62,12 +62,27 @@
       </div>
 
       <form id="signupForm" class="auth-form" role="tabpanel" aria-labelledby="tab-signup" novalidate>
+        <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
         <label for="suName">Your name</label>
         <input id="suName" name="name" autocomplete="name" maxlength="60" required>
         <label for="suEmail">Email</label>
         <input id="suEmail" name="email" type="email" autocomplete="email" maxlength="254" required>
-        <label for="suPass">Password <span class="muted">(at least 8 characters)</span></label>
+        <label for="suCity">City / Ward (optional, for Urimai petitions)</label>
+        <input id="suCity" name="city" maxlength="80" placeholder="e.g., Ward 12, Coimbatore">
+        <label for="suPass">Password <span class="muted">(at least 8 characters, hashed with Argon2id)</span></label>
         <input id="suPass" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="200" required>
+        <label class="consent-check">
+          <input type="checkbox" name="consent" id="suConsent" required>
+          <span>I agree to the <a href="privacy.html#privacy-policy" target="_blank" rel="noopener">ISO 27701 Privacy Policy</a>, <a href="privacy.html#terms-of-service" target="_blank" rel="noopener">Terms</a> &amp; <a href="privacy.html#refund-policy" target="_blank" rel="noopener">₹0 Refund Policy</a>.</span>
+        </label>
+        <label class="consent-check">
+          <input type="checkbox" name="ageConsent" id="suAgeConsent" required>
+          <span>I confirm I am 18+ years old OR have parent/guardian consent for a minor.</span>
+        </label>
+        <label class="consent-check">
+          <input type="checkbox" name="marketingOptIn" id="suAlerts">
+          <span>Optional: Send me weekly scam alerts (unsubscribe anytime).</span>
+        </label>
         <button type="submit" class="primary">Create my account</button>
       </form>
 
@@ -78,6 +93,22 @@
         <input id="liPass" name="password" type="password" autocomplete="current-password" maxlength="200" required>
         <button type="submit" class="primary">Log in</button>
       </form>
+
+      <details style="margin-top:.85rem">
+        <summary class="small">🔑 Forgot password? (15-minute expiring reset link)</summary>
+        <form id="resetReqForm" class="auth-form" style="margin-top:.5rem" novalidate>
+          <label for="rsEmail">Account Email</label>
+          <input id="rsEmail" name="email" type="email" maxlength="254" required>
+          <button type="submit" class="secondary sm">Request 15-min Reset Token</button>
+        </form>
+        <form id="resetConfirmForm" class="auth-form" style="margin-top:.5rem" novalidate>
+          <label for="rsToken">Reset Token</label>
+          <input id="rsToken" name="token" maxlength="128" required>
+          <label for="rsNewPass">New Password (8+ characters)</label>
+          <input id="rsNewPass" name="newPassword" type="password" minlength="8" maxlength="200" required>
+          <button type="submit" class="secondary sm">Reset Password</button>
+        </form>
+      </details>
 
       <p id="authMsg" class="status" role="status" aria-live="polite"></p>
     </section>
@@ -95,7 +126,10 @@
       <ul id="profLearned" class="learn-list"></ul>
       <div class="actions">
         <a class="button primary" href="app.html">Open Kavach × Urimai →</a>
+        <button type="button" id="exportDataBtn" class="secondary">⬇ Export My Data</button>
+        <button type="button" id="unsubBtn" class="secondary">🔕 Unsubscribe Alerts</button>
         <button type="button" id="logoutBtn" class="secondary">Log out</button>
+        <button type="button" id="deleteAcctBtn" class="danger">🗑️ Delete Account</button>
       </div>
       <p id="profMsg" class="status" role="status" aria-live="polite"></p>
     </section>
@@ -103,11 +137,14 @@
     <section id="noAccounts" class="panel glass" hidden>
       <h1>Browser-local mode active</h1>
       <p class="muted">You are running the zero-install browser build. Your Daily Streak, Case Files, and Urimai Kits are stored safely on your device.</p>
-      <a class="button primary" href="app.html">Open Kavach × Urimai →</a>
+      <div class="actions">
+        <a class="button primary" href="app.html">Open Kavach × Urimai →</a>
+        <a class="button secondary" href="privacy.html">ISO Privacy &amp; Policies</a>
+      </div>
     </section>
   </main>
 
-  <footer class="foot"><p>Chat_Safe × Urimai · Emergency: <a href="tel:1930">1930</a> · <a href="tel:112">112</a></p></footer>
+  <footer class="foot"><p>Chat_Safe × Urimai · <a href="privacy.html">Privacy, Terms &amp; Refund Policy</a> · Emergency: <a href="tel:1930">1930</a> · <a href="tel:112">112</a></p></footer>
   <script src="scamtypes.js" defer></script>
   <script src="api.js" defer></script>
   <script src="fx.js" defer></script>
