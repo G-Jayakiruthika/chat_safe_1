@@ -271,14 +271,19 @@
       const currentMaps = getSessionKey('GOOGLE_MAPS_KEY') || getSessionKey('GOOGLE_MAPS_API_KEY');
       const currentSafeBrowsing = getSessionKey('SAFE_BROWSING_KEY') || getSessionKey('SAFE_BROWSING_API_KEY');
       const statusBadge = currentGemini
-        ? '🟢 Gemini API Key active in sessionStorage'
-        : '🟡 No key stored — Simulation Fallback active';
+        ? 'Gemini API Key active in sessionStorage'
+        : 'No key stored — Simulation Fallback active';
+      const EYE_OPEN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
+      const EYE_OFF_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>';
+      const LOCK_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+      const CLOSE_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
       card.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem">
-          <h2 id="byokModalTitle" style="margin:0;font-size:1.15rem">🔐 BYOK API Key Manager (Edge AI)</h2>
-          <button type="button" id="byokCloseBtn" aria-label="Close modal" style="background:transparent;border:0;color:inherit;font-size:1.25rem;cursor:pointer;min-width:44px;min-height:44px">✕</button>
+          <h2 id="byokModalTitle" style="margin:0;font-size:1.15rem;display:inline-flex;align-items:center;gap:.45rem">${LOCK_SVG}<span>BYOK API Key Manager (Edge AI)</span></h2>
+          <button type="button" id="byokCloseBtn" aria-label="Close modal" style="background:transparent;border:0;color:inherit;cursor:pointer;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">${CLOSE_SVG}</button>
         </div>
-        <p style="margin:0;font-size:.82rem;font-weight:700;color:var(--accent)">${statusBadge}</p>
+        <p style="margin:0;font-size:.82rem;font-weight:700;color:${currentGemini ? '#10b981' : '#f59e0b'}">${statusBadge}</p>
         <p style="margin:0;font-size:.9rem;line-height:1.5;color:var(--muted, #b8c7e0)">
           ${promptText} Keys stay strictly in volatile <code>sessionStorage</code>.
         </p>
@@ -287,7 +292,7 @@
           <div class="byok-key-row">
             <input id="byokGeminiInput" type="password" autocomplete="off" placeholder="AIza..." value="${currentGemini.replace(/"/g, '&quot;')}"
               style="padding:.65rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.35));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
-            <button type="button" id="byokToggleVisBtn" class="secondary sm" aria-label="Show or hide stored API key" style="min-height:44px;white-space:nowrap">👁️ View</button>
+            <button type="button" id="byokToggleVisBtn" class="secondary sm byok-toggle-vis" aria-pressed="false" aria-label="Show API key">${EYE_OPEN_SVG}<span>Show</span></button>
           </div>
         </label>
         <label style="display:grid;gap:.3rem;font-size:.82rem;color:var(--muted, #b8c7e0)">
@@ -315,12 +320,18 @@
         onSaved?.(Boolean(key));
         resolve(key || '');
       };
-      $('byokToggleVisBtn')?.addEventListener('click', () => {
-        const inp = $('byokGeminiInput');
-        if (!inp) return;
-        const showing = inp.type === 'text';
-        inp.type = showing ? 'password' : 'text';
-        $('byokToggleVisBtn').textContent = showing ? '👁️ View' : '🙈 Hide';
+      const toggleVisBtn = $('byokToggleVisBtn');
+      const geminiInputEl = $('byokGeminiInput');
+      toggleVisBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!geminiInputEl) return;
+        const nextShow = geminiInputEl.type === 'password';
+        geminiInputEl.type = nextShow ? 'text' : 'password';
+        toggleVisBtn.setAttribute('aria-pressed', String(nextShow));
+        toggleVisBtn.setAttribute('aria-label', nextShow ? 'Hide API key' : 'Show API key');
+        toggleVisBtn.innerHTML = `${nextShow ? EYE_OFF_SVG : EYE_OPEN_SVG}<span>${nextShow ? 'Hide' : 'Show'}</span>`;
+        geminiInputEl.focus({ preventScroll: true });
       });
       card.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -368,18 +379,71 @@
   /* =========================================================================
    * PHASE 2: LIVE GEMINI 2.5 FLASH REST INTEGRATION & MOCK FALLBACK ENGINE
    * ========================================================================= */
+  /**
+   * Maps a numeric 0–100 threat score to one canonical severity tier so banner
+   * color, gauge level, verdict copy, and threat chips always stay synchronized.
+   *
+   * @param {number} score Risk score between 0 and 100.
+   * @returns {object} Normalized tier metadata (`safe`, `moderate`, or `critical`).
+   */
+  function getThreatTier(score) {
+    const s = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+    if (s <= 25) {
+      return {
+        score: s,
+        tier: 'safe',
+        level: 'safe',
+        intent: 'SAFE',
+        cardClass: 'safe',
+        pillClass: 'green',
+        badgeLabel: 'KAVACH SAFE CHECK',
+        verdict: 'Looks safe. No common scam pattern found',
+        scamType: 'Verified Safe Message',
+        mood: 'safe',
+      };
+    }
+    if (s <= 65) {
+      return {
+        score: s,
+        tier: 'moderate',
+        level: 'suspicious',
+        intent: 'MODERATE',
+        cardClass: 'moderate',
+        pillClass: 'amber',
+        badgeLabel: 'MODERATE RISK WARNING',
+        verdict: 'Moderate / Low Risk — Verify Sender Before Acting',
+        scamType: 'Unverified / Suspicious Request',
+        mood: 'suspicious',
+      };
+    }
+    return {
+      score: s,
+      tier: 'critical',
+      level: 'critical',
+      intent: 'SCAM',
+      cardClass: 'scam',
+      pillClass: 'red',
+      badgeLabel: 'HIGH RISK SCAM ALERT',
+      verdict: 'High Risk / Critical Scam Detected',
+      scamType: 'Active Cyber Fraud Pattern',
+      mood: 'critical',
+    };
+  }
+
   const ROUTER_SYSTEM_PROMPT = [
     'You are the Kavach x Urimai Multi-Agent Intent Router for Indian citizens.',
     'Analyze the user message or voice transcript inside <suspect> tags.',
-    'Classify intent strictly as SCAM (cyber fraud, CBI/police digital arrest, OTP/KYC phishing, fake courier/parcel, job/investment scam) or CIVIC (broken water pipe, bad road, pothole, streetlight, drainage, garbage, panchayat/municipal breakdown).',
-    'For completely benign/safe personal messages, set intent to SCAM with confidence_score <= 15 and note safe status in action_payload.summary.',
-    'Return strictly formatted JSON matching the schema: intent, confidence_score (0-100), threat_vectors (array of strings), and action_payload (summary, department_or_agency, draft_text, regional_draft_text, next_steps).',
+    'Classify intent strictly as:',
+    '- SAFE: completely benign normal personal messages, legitimate non-phishing transactional notices ("do not share OTP"), or harmless reminders. Set confidence_score strictly between 0 and 25 as the THREAT RISK SCORE (e.g. 5), leave threat_vectors empty [], and set action_payload.summary to "Looks safe. No common scam pattern found".',
+    '- SCAM: suspicious or fraudulent messages. Always use confidence_score as a THREAT RISK SCORE (26-65 for moderate/low risk warning notes; 66-100 for high risk / critical scam like CBI/police digital arrest, fake courier drugs, OTP/KYC phishing, lottery/SEBI stock scams), list specific threat_vectors, and provide 1930 draft_text.',
+    '- CIVIC: broken water pipe, bad road, pothole, streetlight, drainage, garbage, panchayat/municipal breakdown.',
+    'Return strictly formatted JSON matching the schema: intent, confidence_score (0-100 threat risk score), threat_vectors, action_payload.',
   ].join(' ');
 
   const GEMINI_RESPONSE_SCHEMA = Object.freeze({
     type: 'OBJECT',
     properties: {
-      intent: { type: 'STRING', enum: ['SCAM', 'CIVIC'] },
+      intent: { type: 'STRING', enum: ['SAFE', 'SCAM', 'CIVIC'] },
       confidence_score: { type: 'NUMBER' },
       threat_vectors: {
         type: 'ARRAY',
@@ -409,7 +473,7 @@
    *
    * @param {string} userText Raw user utterance or suspicious message.
    * @param {string} apiKey User-provided Google Gemini API key.
-   * @returns {Promise<{intent: 'SCAM'|'CIVIC', confidence_score: number, threat_vectors: string[], action_payload: object, _source: string}>}
+   * @returns {Promise<{intent: 'SAFE'|'SCAM'|'CIVIC', confidence_score: number, threat_vectors: string[], action_payload: object, _source: string}>}
    */
   async function processWithGemini(userText, apiKey) {
     const cleanKey = String(apiKey || '').trim();
@@ -446,31 +510,41 @@
       const payload = await response.json();
       const rawJson = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
       const parsed = JSON.parse(rawJson);
-      const normalizedIntent = String(parsed.intent || '').toUpperCase() === 'CIVIC' ? 'CIVIC' : 'SCAM';
-      const score = Math.max(0, Math.min(100, Math.round(Number(parsed.confidence_score) || 0)));
-      const vectors = Array.isArray(parsed.threat_vectors)
-        ? parsed.threat_vectors.map((v) => String(v || '').trim()).filter(Boolean)
-        : [];
+      const rawIntent = String(parsed.intent || '').toUpperCase();
+      const normalizedIntent = rawIntent === 'CIVIC' ? 'CIVIC' : rawIntent === 'SAFE' ? 'SAFE' : 'SCAM';
+      let score = Math.max(0, Math.min(100, Math.round(Number(parsed.confidence_score) || 0)));
+      if (normalizedIntent === 'SAFE' && score > 25) {
+        score = Math.min(25, Math.max(0, 100 - score));
+      }
+      const tier = normalizedIntent === 'CIVIC' ? null : getThreatTier(score);
+      const vectors = tier && tier.tier === 'safe'
+        ? []
+        : Array.isArray(parsed.threat_vectors)
+          ? parsed.threat_vectors.map((v) => String(v || '').trim()).filter(Boolean)
+          : [];
       const ap = parsed.action_payload && typeof parsed.action_payload === 'object' ? parsed.action_payload : {};
       const nextSteps = Array.isArray(ap.next_steps)
         ? ap.next_steps.map((s) => String(s || '').trim()).filter(Boolean)
         : [];
+      const summary = tier && tier.tier === 'safe'
+        ? tier.verdict
+        : (String(ap.summary || '').trim() || tier?.verdict || String(userText || '').slice(0, 140));
 
       setConnectionStatus('byok');
       return {
         _source: 'edge-byok',
-        intent: normalizedIntent,
+        intent: normalizedIntent === 'CIVIC' ? 'CIVIC' : tier.intent,
         confidence_score: score,
         threat_vectors: vectors,
         action_payload: {
-          summary: String(ap.summary || '').trim() || String(userText || '').slice(0, 140),
+          summary,
           department_or_agency: String(ap.department_or_agency || (normalizedIntent === 'CIVIC' ? 'Municipal Grievance Desk' : 'National Cybercrime Helpline 1930')).trim(),
-          draft_text: String(ap.draft_text || '').trim(),
+          draft_text: tier && tier.tier !== 'critical' ? '' : String(ap.draft_text || '').trim(),
           regional_draft_text: String(ap.regional_draft_text || '').trim(),
           next_steps: nextSteps,
         },
         risk_score: normalizedIntent === 'CIVIC' ? 0 : score,
-        details: String(ap.summary || '').trim(),
+        details: summary,
         action: nextSteps[0] || '',
       };
     } finally {
@@ -480,8 +554,8 @@
   window.processWithGemini = processWithGemini;
 
   /**
-   * Bulletproof deterministic simulation engine when API key is skipped or offline.
-   * Ensures demo keywords ('CBI', 'arrest', 'water pipe', etc.) always trigger rich live UI responses.
+   * Deterministic local & demo rule engine when API key is skipped or offline.
+   * Synchronizes SAFE (0-25), MODERATE (26-65), CRITICAL SCAM (66-100), and CIVIC paths.
    *
    * @param {string} userText Citizen input or voice transcript.
    * @returns {Promise<object>} Structured Gemini-compatible payload.
@@ -491,9 +565,7 @@
     const base = await API.call('analyze', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch(() => null);
 
     const civicRe = /\b(water\s*pipe|water|pipe|pothole|road|street\s*light|streetlight|drainage|sewage|garbage|trash|panchayat|municipality|ward)\b/i;
-    const scamKeywordRe = /\b(cbi|ncb|ed\b|police|arrest|warrant|fedex|drugs|customs|otp|kyc|blocked|suspended|lottery|prize|sebi|stock|upi|rs\.?|₹|bit\.ly|t\.me)\b/i;
-
-    const isCivic = base?.intent === 'CIVIC' || (civicRe.test(clean) && !/\b(electricity\s*bill|disconnect|otp|upi)\b/i.test(clean));
+    const isCivic = base?.intent === 'CIVIC' || (civicRe.test(clean) && !/\b(electricity\s*bill|disconnect|otp|upi|arrest|cbi)\b/i.test(clean));
     if (isCivic) {
       const kit = base?.urimaiKit || await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch(() => null);
       return {
@@ -522,48 +594,88 @@
       };
     }
 
-    const isScamKeyword = scamKeywordRe.test(clean);
-    const ruleScore = base?.score || 0;
-    const score = isScamKeyword ? Math.max(ruleScore, 88) : ruleScore;
-    const vectors = [...(base?.redFlags || [])];
-    if (/\b(cbi|police|ncb|customs)\b/i.test(clean) && !vectors.some((v) => /impersonat|cbi|police/i.test(v))) {
-      vectors.unshift('Fake Law Enforcement / CBI Authority Impersonation');
-    }
-    if (/\barrest\b/i.test(clean) && !vectors.some((v) => /arrest/i.test(v))) {
-      vectors.unshift('Coercive "Digital Arrest" & Legal Fear Tactic');
-    }
-    if (/\b(otp|kyc|blocked)\b/i.test(clean) && !vectors.some((v) => /otp|kyc/i.test(v))) {
-      vectors.unshift('Credential / OTP Harvesting Under Account-Block Threat');
-    }
-    if (!vectors.length && score >= 50) vectors.push('High-risk social engineering pattern detected');
+    const ruleScore = Math.max(0, Math.min(100, Math.round(Number(base?.score) || 0)));
+    const hasSafeOtpNotice = /\b(do\s+not|never|don'?t)\s+share\s+(this\s+|your\s+|the\s+)?(otp|pin|cvv)/i.test(clean)
+      && !/\b(http|https|bit\.ly|tinyurl|t\.me|verify\s+now|blocked|suspended|arrest|cbi|transfer)\b/i.test(clean);
+    const highRiskRe = /\b(digital\s+arrest|arrest\s+warrant)\b|\b(cbi|ncb|enforcement\s+directorate|customs)\b.*\b(arrest|warrant|video\s*call|transfer|money|fine|drugs|parcel|freeze)\b|\b(fedex|courier|customs)\b.*\b(drugs|illegal|seized|narcotics|police|cbi)\b|(share|send|verify|update|enter|tell).{0,25}\b(otp|pin|cvv|kyc|aadhaar|pan)\b|\b(kyc|account|sim|card)\b.{0,25}\b(blocked|suspended|deactivated|expire|frozen)\b|\b(guaranteed\s+returns?|daily\s+profit|sebi\s+vip|vip\s+stock\s+tips?|won\s+(a\s+)?lottery|claim\s+(your\s+)?prize)\b/i;
+    const moderateRiskRe = /\b(urgent|verify\s+now|click\s+here|bit\.ly|tinyurl|t\.me|claim\s+now|act\s+now|free\s+gift|loan\s+approved)\b/i;
 
-    const complaintDraft = base?.complaint || [
-      'NATIONAL CYBER CRIME REPORTING PORTAL (https://cybercrime.gov.in | Helpline: 1930)',
-      `Risk Assessment: ${score}/100 (${score >= 75 ? 'CRITICAL' : score >= 50 ? 'HIGH' : 'LOW'})`,
-      `Reported Message/Call: "${clean}"`,
-      `Threat Vectors: ${vectors.join('; ') || 'None detected'}`,
-      'Action Requested: Immediate call trace / UPI & bank freeze protection under 1930.',
-    ].join('\n');
+    let score = ruleScore;
+    if (hasSafeOtpNotice) {
+      score = Math.min(ruleScore, 15);
+    } else if (highRiskRe.test(clean)) {
+      score = Math.max(ruleScore, 82);
+    } else if (moderateRiskRe.test(clean)) {
+      score = ruleScore >= 66 ? ruleScore : Math.max(ruleScore, 45);
+    }
+
+    const tier = getThreatTier(score);
+    let vectors = [];
+    if (tier.tier === 'critical') {
+      vectors = [...(base?.redFlags || [])];
+      if (/\b(cbi|police|ncb|customs)\b/i.test(clean) && !vectors.some((v) => /impersonat|cbi|police/i.test(v))) {
+        vectors.unshift('Fake Law Enforcement / CBI Authority Impersonation');
+      }
+      if (/\b(digital\s+arrest|arrest)\b/i.test(clean) && !vectors.some((v) => /arrest/i.test(v))) {
+        vectors.unshift('Digital Arrest & Legal Fear Tactic');
+      }
+      if (/\b(otp|kyc|pin|cvv|blocked|suspended)\b/i.test(clean) && !vectors.some((v) => /otp|kyc|credential/i.test(v))) {
+        vectors.unshift('Credential / OTP Harvesting');
+      }
+      if (/\b(sebi|guaranteed|stock|profit|lottery|prize)\b/i.test(clean) && !vectors.some((v) => /investment|lottery|return/i.test(v))) {
+        vectors.unshift('Guaranteed Returns / Investment Scam');
+      }
+      if (!vectors.length) vectors.push('High-Risk Cyber Fraud Pattern');
+    } else if (tier.tier === 'moderate') {
+      vectors = [...(base?.redFlags || [])];
+      if (!vectors.length) vectors.push('Unverified Link or Urgent Call-to-Action — Verify Sender');
+    }
+
+    const baseWasSafe = !base?.level || base.level === 'safe';
+    const summary = tier.tier === 'safe'
+      ? tier.verdict
+      : tier.tier === 'moderate'
+        ? ((!baseWasSafe && base?.verdict) ? base.verdict : tier.verdict)
+        : ((!baseWasSafe && base?.verdict) ? base.verdict : 'High Risk / Critical Scam — Do Not Comply or Pay');
+
+    const complaintDraft = tier.tier === 'critical'
+      ? (base?.complaint || [
+        'NATIONAL CYBER CRIME REPORTING PORTAL (https://cybercrime.gov.in | Helpline: 1930)',
+        `Risk Assessment: ${score}/100 (HIGH RISK / CRITICAL)`,
+        `Reported Message/Call: "${clean}"`,
+        `Threat Vectors: ${vectors.join('; ')}`,
+        'Action Requested: Immediate call trace / UPI & bank freeze protection under 1930.',
+      ].join('\n'))
+      : '';
+
+    const nextSteps = tier.tier === 'safe'
+      ? ['No common scam pattern found. Continue practicing safe digital hygiene and never share OTPs.']
+      : tier.tier === 'moderate'
+        ? ((!baseWasSafe && base?.nextSteps?.length) ? base.nextSteps : [
+          'Verify this request via the official website, app, or printed customer-care number.',
+          'Do not click shortened links or share OTP, PIN, or KYC documents.',
+        ])
+        : ((!baseWasSafe && base?.nextSteps?.length) ? base.nextSteps : [
+          'Disconnect immediately — Indian Police/CBI never conduct "digital arrests" on video.',
+          'Do NOT transfer any money or share OTP/Aadhaar/PAN details.',
+          'Dial 1930 or report at cybercrime.gov.in immediately.',
+        ]);
 
     return {
       _source: 'mock-fallback',
-      intent: 'SCAM',
+      intent: tier.intent,
       confidence_score: score,
       risk_score: score,
       threat_vectors: vectors,
       action_payload: {
-        summary: base?.verdict || (score >= 50 ? 'High-Risk Cyber Fraud Detected — Do Not Comply or Pay' : 'No common scam signatures detected'),
-        department_or_agency: 'National Cybercrime Helpline (1930) / I4C',
+        summary,
+        department_or_agency: tier.tier === 'critical' ? 'National Cybercrime Helpline (1930) / I4C' : 'Kavach Local Shield',
         draft_text: complaintDraft,
         regional_draft_text: '',
-        next_steps: base?.nextSteps?.length ? base.nextSteps : [
-          'Disconnect the call immediately — Indian Police/CBI never conduct "digital arrests" on video.',
-          'Do NOT transfer any money or share OTP/Aadhaar/PAN details.',
-          'Dial 1930 or report at cybercrime.gov.in immediately.',
-        ],
+        next_steps: nextSteps,
       },
-      details: base?.explanation || base?.verdict || clean,
-      action: 'Hang up immediately and dial 1930.',
+      details: tier.tier === 'safe' ? tier.verdict : (base?.explanation || summary),
+      action: nextSteps[0],
       _baseAnalysis: base,
     };
   }
@@ -636,20 +748,23 @@
    * PHASE 3: GOOGLE MAPS GEOLOCATION, SAFE BROWSING API & THEME STATE MANAGEMENT
    * ========================================================================= */
   /**
-   * Swaps the global UI CSS theme and palette dynamically between Urimai Blue
-   * (`bluedragon` + `.civic-theme`) and Kavach Red (`lionfish` + `.scam-theme`).
+   * Swaps the global UI CSS theme and palette dynamically across Urimai Blue
+   * (`bluedragon` + `.civic-theme`), Safe Emerald (`mantis`), Moderate Amber (`mandarin`),
+   * and Critical Scam Red (`lionfish` + `.scam-theme`).
    *
-   * @param {'SCAM'|'CIVIC'|'SAFE'} intent Classified intent returned by AI/rules.
+   * @param {'SCAM'|'CIVIC'|'SAFE'|'MODERATE'} intent Classified intent returned by AI/rules.
    * @param {number} [score=0] Risk score on a 0–100 scale.
    * @returns {void}
    */
   function switchIntentPalette(intent, score = 0) {
     const isCivic = intent === 'CIVIC';
-    const isScam = !isCivic && (intent === 'SCAM' || score >= 50);
+    const tier = isCivic ? null : getThreatTier(score);
+    const isCritical = Boolean(tier && tier.tier === 'critical');
+    const isModerate = Boolean(tier && tier.tier === 'moderate');
     document.body.classList.toggle('civic-theme', isCivic);
-    document.body.classList.toggle('scam-theme', isScam);
-    const targetPalette = isCivic ? 'bluedragon' : isScam ? 'lionfish' : null;
-    if (!targetPalette) return;
+    document.body.classList.toggle('scam-theme', isCritical);
+    document.body.classList.toggle('moderate-theme', isModerate);
+    const targetPalette = isCivic ? 'bluedragon' : isCritical ? 'lionfish' : isModerate ? 'mandarin' : 'mantis';
     if (window.ChatSafeTheme?.set) window.ChatSafeTheme.set('palette', targetPalette);
     else document.documentElement.dataset.palette = targetPalette;
     kavach.setDark(isDark());
@@ -1054,24 +1169,34 @@
       return;
     }
 
-    const isThreat = score >= 45;
-    const draft = ap.draft_text || `NATIONAL CYBER CRIME HELPLINE (1930 | https://cybercrime.gov.in)\nSuspected Scam (${score}/100): ${rawText}`;
-    card.className = `hero-dynamic-card ${isThreat ? 'scam' : ''}`;
+    const tier = getThreatTier(score);
+    const isCritical = tier.tier === 'critical';
+    const isModerate = tier.tier === 'moderate';
+    const isSafe = tier.tier === 'safe';
+    const displayVectors = isSafe ? [] : vectors;
+    const summaryText = isSafe
+      ? tier.verdict
+      : (ap.summary || verdict.details || tier.verdict);
+    const draft = isCritical
+      ? (ap.draft_text || `NATIONAL CYBER CRIME HELPLINE (1930 | https://cybercrime.gov.in)\nSuspected Scam (${tier.score}/100): ${rawText}`)
+      : '';
+    card.className = `hero-dynamic-card ${tier.cardClass}`;
     card.hidden = false;
     card.innerHTML = `
       <div class="hdc-head">
-        <span class="pill ${isThreat ? 'red' : 'green'}">${isThreat ? 'KAVACH SCAM ALERT' : 'KAVACH SAFE CHECK'} · ${score}/100</span>
+        <span class="pill ${tier.pillClass}">${tier.badgeLabel} · ${tier.score}/100</span>
         <span class="small muted">${escapeHtml(sourceBadge)}</span>
       </div>
-      <div class="hdc-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${score}" aria-label="Scam risk meter">
-        <span style="width:${score}%"></span>
+      <div class="hdc-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${tier.score}" aria-label="Scam risk meter">
+        <span style="width:${tier.score}%"></span>
       </div>
-      <p style="margin:0;font-weight:700" dir="${dir}">${escapeHtml(ap.summary || verdict.details || 'Analysis complete')}</p>
-      ${vectors.length ? `<div class="hdc-vectors">${vectors.map((v) => `<span class="hdc-vector-chip">${escapeHtml(v)}</span>`).join('')}</div>` : ''}
-      ${isThreat ? `<pre class="hdc-draft" dir="${dir}">${escapeHtml(draft)}</pre>` : ''}
+      <p style="margin:0;font-weight:700" dir="${dir}">${escapeHtml(summaryText)}</p>
+      ${displayVectors.length ? `<div class="hdc-vectors">${displayVectors.map((v) => `<span class="hdc-vector-chip">${escapeHtml(v)}</span>`).join('')}</div>` : ''}
+      ${isModerate && ap.next_steps?.length ? `<p class="small" style="margin:0" dir="${dir}">${escapeHtml(ap.next_steps[0])}</p>` : ''}
+      ${isCritical && draft ? `<pre class="hdc-draft" dir="${dir}">${escapeHtml(draft)}</pre>` : ''}
       <div class="actions" style="margin:0">
-        ${isThreat ? '<button type="button" id="hdcCopy1930Btn" class="primary sm">Copy 1930 Complaint</button>' : ''}
-        ${isThreat ? '<a href="tel:1930" class="button danger sm">Call 1930</a>' : ''}
+        ${isCritical ? '<button type="button" id="hdcCopy1930Btn" class="primary sm">Copy 1930 Complaint</button>' : ''}
+        ${isCritical ? '<a href="tel:1930" class="button danger sm">Call 1930</a>' : ''}
         <button type="button" id="hdcFullScanBtn" class="secondary sm">Open in AI Scanner</button>
       </div>
     `;
@@ -1115,7 +1240,7 @@
         routed.urimaiKit = kit;
 
         renderHeroDynamicCard(routed, clean, 'Acquiring live GPS ward coordinates…');
-        const replyText = `${ap.summary || kit.summary}\n\n⚖️ Urimai Action Kit ${kit.kitId} ready (${kit.department}). Fetching live GPS ward coordinates…`;
+        const replyText = `${ap.summary || kit.summary}\n\nUrimai Action Kit ${kit.kitId} ready (${kit.department}). Fetching live GPS ward coordinates…`;
         addAgentMessage('Kavach × Urimai', 'kavach', replyText);
         dispatchUrimaiKitToFamily(kit);
 
@@ -1126,7 +1251,7 @@
           if ($('hdcGeoLabel')) $('hdcGeoLabel').textContent = geo.address;
           if ($('fhKitTitle')) $('fhKitTitle').textContent = `${kit.summary} — ${geo.address}`;
           if ($('fhEngLetter')) $('fhEngLetter').textContent = kit.englishLetter;
-          if ($('geoStatus')) $('geoStatus').textContent = `📍 Google Maps Location: ${geo.address}`;
+          if ($('geoStatus')) $('geoStatus').textContent = `Google Maps Location: ${geo.address}`;
           if ($('detected-address')) $('detected-address').textContent = geo.address;
           renderHeroDynamicCard(routed, clean, geo.address);
         }
@@ -1135,21 +1260,32 @@
         return;
       }
 
-      // SCAM / SAFE path
-      const isThreat = score >= 45;
-      pulseBus(isThreat ? ['vani', 'gemini', 'kavach', 'netra', 'payguard'] : ['vani', 'gemini', 'kavach']);
-      switchIntentPalette(isThreat ? 'SCAM' : 'SAFE', score);
-      setMood(score >= 75 ? 'critical' : isThreat ? 'high' : 'safe');
-      Sound.play(isThreat ? 'alert' : 'safe');
+      // SAFE (0-25) / MODERATE (26-65) / CRITICAL SCAM (66-100) path
+      const tier = getThreatTier(score);
+      pulseBus(tier.tier === 'critical' ? ['vani', 'gemini', 'kavach', 'netra', 'payguard'] : ['vani', 'gemini', 'kavach']);
+      switchIntentPalette(tier.intent, tier.score);
+      setMood(tier.mood);
+      Sound.play(tier.tier === 'critical' ? 'alert' : 'safe');
 
-      const summaryLine = ap.summary || routed.details || (isThreat ? 'Cyber scam indicators detected.' : 'Looks safe.');
+      const summaryLine = tier.tier === 'safe'
+        ? tier.verdict
+        : (ap.summary || routed.details || tier.verdict);
       const nextStep = ap.next_steps?.[0] || routed.action || '';
-      const replyText = isThreat
-        ? `🚨 ${summaryLine} (Risk ${score}/100)\n${vectors.length ? `Vectors: ${vectors.join(' · ')}\n` : ''}${nextStep ? `Next: ${nextStep}` : ''}`
-        : `🛡️ ${summaryLine}`;
+      const replyText = tier.tier === 'safe'
+        ? `${summaryLine} (Risk ${tier.score}/100)`
+        : `${summaryLine} (Risk ${tier.score}/100)\n${vectors.length ? `Vectors: ${vectors.join(' · ')}\n` : ''}${nextStep ? `Next: ${nextStep}` : ''}`;
 
-      addAgentMessage('Kavach', `kavach ${isThreat ? 'lvl-critical' : ''}`.trim(), replyText);
-      renderHeroDynamicCard(routed, clean);
+      addAgentMessage('Kavach', `kavach ${tier.tier === 'critical' ? 'lvl-critical' : tier.tier === 'moderate' ? 'lvl-suspicious' : ''}`.trim(), replyText);
+      renderHeroDynamicCard({
+        ...routed,
+        intent: tier.intent,
+        confidence_score: tier.score,
+        threat_vectors: tier.tier === 'safe' ? [] : vectors,
+        action_payload: {
+          ...ap,
+          summary: summaryLine,
+        },
+      }, clean);
 
       if (isThreat) {
         triggerFamilySos(clean, {
@@ -1418,6 +1554,13 @@
     $('xrayStatus').textContent = 'Analyzing with Gemini Intent Router…';
     $('result').hidden = true;
     $('urimaiScanResult').hidden = true;
+    if ($('heroDynamicCard')) $('heroDynamicCard').hidden = true;
+    if ($('redFlags')) $('redFlags').innerHTML = '';
+    if ($('nextSteps')) $('nextSteps').innerHTML = '';
+    if ($('complaint')) $('complaint').value = '';
+    if ($('complaintBlock')) $('complaintBlock').hidden = true;
+    if ($('upiBlock')) $('upiBlock').hidden = true;
+    if ($('upiList')) $('upiList').innerHTML = '';
     pulseBus(['gemini', 'kavach', 'urimai']);
     Sound.play('scan');
 
@@ -1465,38 +1608,62 @@
           res.score = 0;
           res.urimaiKit = kit;
         } else {
-          const finalScore = isMock ? Math.max(res.score || 0, confScore) : confScore;
-          res.intent = finalScore >= 45 ? 'SCAM' : 'SAFE';
-          res.score = finalScore;
-          res.level = finalScore >= 75 ? 'critical' : finalScore >= 50 ? 'high' : finalScore >= 25 ? 'suspicious' : 'safe';
-          res.verdict = ap.summary || res.verdict || (finalScore >= 45 ? 'Cyber Fraud Indicators Detected' : 'No Scam Patterns Detected');
-          if (vectors.length) {
-            res.redFlags = [...new Set([...vectors, ...(res.redFlags || [])])];
-            res.scamType = vectors[0];
-          }
-          if (ap.next_steps?.length) {
-            res.nextSteps = [...new Set([...ap.next_steps, ...(res.nextSteps || [])])];
-          }
-          if (ap.draft_text) res.complaint = ap.draft_text;
-          else if (finalScore >= 45 && !res.complaint) {
-            res.complaint = `NATIONAL CYBER CRIME REPORTING PORTAL (https://cybercrime.gov.in | Helpline 1930)\nSuspected Scam (${res.score}/100): ${routed.details || clean}\nRecommended Action: ${routed.action || 'Freeze bank/UPI and dial 1930 immediately.'}`;
+          const finalScore = confScore;
+          const tier = getThreatTier(finalScore);
+          const origBaseSafe = !res.level || res.level === 'safe';
+          res.intent = tier.intent;
+          res.score = tier.score;
+          res.level = tier.level;
+          if (tier.tier === 'safe') {
+            res.verdict = tier.verdict;
+            res.scamType = tier.scamType;
+            res.redFlags = [];
+            res.complaint = '';
+            res.nextSteps = ap.next_steps?.length ? ap.next_steps : ['No common scam pattern found. Never share OTPs or PINs with strangers.'];
+            res.explanation = tier.verdict;
+          } else if (tier.tier === 'moderate') {
+            res.verdict = ap.summary || (!origBaseSafe && res.verdict ? res.verdict : tier.verdict);
+            res.scamType = vectors[0] || res.scamType || tier.scamType;
+            res.redFlags = vectors.length ? vectors : (res.redFlags?.length ? res.redFlags : ['Unverified request or suspicious link — verify independently.']);
+            res.complaint = '';
+            res.nextSteps = ap.next_steps?.length ? ap.next_steps : (!origBaseSafe && res.nextSteps?.length ? res.nextSteps : ['Verify sender through an official app or website before taking action.']);
+            res.explanation = ap.summary || routed.details || (!origBaseSafe && res.explanation ? res.explanation : tier.verdict);
+          } else {
+            res.verdict = ap.summary || (!origBaseSafe && res.verdict ? res.verdict : tier.verdict);
+            res.scamType = vectors[0] || res.scamType || tier.scamType;
+            res.redFlags = vectors.length ? [...new Set([...vectors, ...(res.redFlags || [])])] : (res.redFlags || ['High-Risk Cyber Fraud Pattern']);
+            res.nextSteps = ap.next_steps?.length ? [...new Set([...ap.next_steps, ...(res.nextSteps || [])])] : (res.nextSteps || []);
+            res.complaint = ap.draft_text || res.complaint || `NATIONAL CYBER CRIME REPORTING PORTAL (https://cybercrime.gov.in | Helpline 1930)\nSuspected Scam (${res.score}/100): ${routed.details || clean}\nRecommended Action: ${routed.action || 'Freeze bank/UPI and dial 1930 immediately.'}`;
+            res.explanation = ap.summary || routed.details || (!origBaseSafe && res.explanation ? res.explanation : res.verdict);
           }
         }
-        if (ap.summary || routed.details) res.explanation = ap.summary || routed.details;
         res.engine = isEdgeByok
-          ? '🟢 Live: Edge AI (BYOK) — Gemini 2.5 Flash'
-          : '🟡 Mock Fallback Engine (Offline / Presentation Rules)';
+          ? 'Live: Edge AI (BYOK) — Gemini 2.5 Flash'
+          : 'Mock Fallback Engine (Local Rules)';
       } else if (isCloud) {
-        res.engine = `🟢 Live: Cloud Run Server (${res.engine || 'Node.js'})`;
+        if (res.intent !== 'CIVIC') {
+          const cloudTier = getThreatTier(res.score);
+          res.score = cloudTier.score;
+          res.level = cloudTier.level;
+          res.intent = cloudTier.intent;
+          if (cloudTier.tier === 'safe') {
+            res.verdict = cloudTier.verdict;
+            res.scamType = cloudTier.scamType;
+            res.redFlags = [];
+            res.complaint = '';
+          }
+        }
+        res.engine = `Live: Cloud Run Server (${res.engine || 'Node.js'})`;
       }
 
-      // 3) Override Risk Score to 100 & Force Furious Red if Safe Browsing flags a malicious URL
+      // 3) Override Risk Score to 100 & Force Deep Crimson Red if Safe Browsing flags a malicious URL
       const flaggedUrls = sbResult && !sbResult.safe && sbResult.matches?.length ? sbResult.matches : [];
       if (flaggedUrls.length > 0) {
         res.intent = 'SCAM';
         res.score = 100;
         res.risk_score = 100;
         res.level = 'critical';
+        res.scamType = 'Malicious / Phishing URL Detected';
         res.verdict = `CRITICAL THREAT: Malicious URL Blocked (${flaggedUrls[0].url})`;
         if (!res.complaint) {
           res.complaint = `NATIONAL CYBER CRIME REPORTING PORTAL (https://cybercrime.gov.in | Helpline 1930)\nMalicious Link Detected (${flaggedUrls.map((m) => m.url).join(', ')}): ${clean}`;
@@ -1537,7 +1704,7 @@
         if (isEdgeByok && routed.details) res.urimaiKit.summary = routed.details;
 
         if (detectedAddrEl) detectedAddrEl.textContent = streetAddress;
-        if ($('geoStatus')) $('geoStatus').textContent = `📍 Google Maps Location: ${streetAddress}`;
+        if ($('geoStatus')) $('geoStatus').textContent = `Google Maps Location: ${streetAddress}`;
         $('usDept').textContent = res.urimaiKit.department;
         $('usSummary').textContent = `${res.urimaiKit.summary} — ${streetAddress}`;
         $('usEngLetter').textContent = res.urimaiKit.englishLetter.replace(/Ward 12[^,\n]*/i, streetAddress);
@@ -1548,32 +1715,40 @@
         return;
       }
 
-      // Branch B: KAVACH SCAM / SAFE (Red Theme + Furious Red on Match + 1930 Draft)
-      pulseBus(['gemini', 'kavach', 'netra', 'payguard']);
-      switchIntentPalette(res.intent, res.score);
-      setMood(flaggedUrls.length ? 'critical' : degraded ? 'suspicious' : res.level);
-      Sound.play(res.score >= 50 ? 'alert' : 'safe');
+      // Branch B: KAVACH SCAM / MODERATE / SAFE (Synchronized Tier Verdict, Gauge, Colors & Hero Banner)
+      const finalTier = getThreatTier(res.score);
+      res.score = finalTier.score;
+      res.level = finalTier.level;
+      res.intent = finalTier.intent;
+      if (finalTier.tier === 'safe') {
+        res.verdict = finalTier.verdict;
+        res.scamType = finalTier.scamType;
+      }
+      pulseBus(finalTier.tier === 'critical' ? ['gemini', 'kavach', 'netra', 'payguard'] : ['gemini', 'kavach']);
+      switchIntentPalette(finalTier.intent, finalTier.score);
+      setMood(flaggedUrls.length ? 'critical' : degraded ? 'suspicious' : finalTier.mood);
+      Sound.play(finalTier.tier === 'critical' ? 'alert' : 'safe');
       $('xrayStatus').textContent = degraded ? offlineFallbackMsg : '';
       renderHeroDynamicCard({
         ...routed,
-        intent: 'SCAM',
-        confidence_score: res.score,
-        threat_vectors: res.redFlags || routed?.threat_vectors || [],
+        intent: finalTier.intent,
+        confidence_score: finalTier.score,
+        threat_vectors: finalTier.tier === 'safe' ? [] : (res.redFlags || routed?.threat_vectors || []),
         action_payload: {
           summary: res.verdict,
-          department_or_agency: 'National Cybercrime Helpline (1930)',
-          draft_text: res.complaint || '',
+          department_or_agency: finalTier.tier === 'critical' ? 'National Cybercrime Helpline (1930)' : 'Kavach Local Shield',
+          draft_text: finalTier.tier === 'critical' ? (res.complaint || '') : '',
           next_steps: res.nextSteps || [],
         },
       }, clean);
-      $('result').className = `result lvl-${res.level}`;
+      $('result').className = `result lvl-${finalTier.level}`;
       $('result').hidden = false;
-      $('gauge').className = `gauge lvl-${res.level}`;
-      $('gauge').setAttribute('aria-valuenow', String(res.score));
-      $('gauge').style.setProperty('--pct', res.score);
-      $('scoreText').textContent = res.score;
-      $('levelText').className = `level lvl-${res.level}`;
-      $('levelText').textContent = `${res.level.toUpperCase()} (${res.score}/100)`;
+      $('gauge').className = `gauge lvl-${finalTier.level}`;
+      $('gauge').setAttribute('aria-valuenow', String(finalTier.score));
+      $('gauge').style.setProperty('--pct', finalTier.score);
+      $('scoreText').textContent = finalTier.score;
+      $('levelText').className = `level lvl-${finalTier.level}`;
+      $('levelText').textContent = `${finalTier.badgeLabel} (${finalTier.score}/100)`;
       $('verdict').textContent = res.verdict;
       $('scamType').textContent = res.scamType;
       $('explanation').textContent = res.explanation || res.details || '';
