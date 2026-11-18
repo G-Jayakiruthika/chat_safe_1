@@ -1,3 +1,5 @@
+> **© 2026 Jayakiruthika G. All Rights Reserved.** This project is proprietary software created for evaluation purposes only. Commercial distribution, reproduction, or use without explicit written consent is strictly prohibited.
+
 # Chat_Safe × Urimai — Edge AI Cyber Guardian & Civic Grievance Bridge
 
 > **Hack2Skill PromptWars Final Submission** · **Zero-Backend Edge-Compute PWA** + Optional Cloud Run Reference Server · **23 Indian Languages** (English + all 22 Eighth Schedule languages) · **Zero Runtime npm Dependencies** (`716.4 KB` total tracked footprint).
