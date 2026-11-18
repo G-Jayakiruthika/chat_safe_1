@@ -30,9 +30,19 @@
   };
 
   const uiLang = () => (lang === 'auto' ? 'en' : lang);
-  const t = (key, vars = {}) => {
-    const s = (I18N[uiLang()] && I18N[uiLang()][key]) || I18N.en[key] || key;
-    return s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+  const t = (key, vars = {}, fallbackText = '') => {
+    if (typeof window.CHATSAFE_TRANSLATE === 'function') {
+      return window.CHATSAFE_TRANSLATE(uiLang(), key, vars, fallbackText);
+    }
+    const dict = I18N || {};
+    const localVal = dict[uiLang()]?.[key];
+    const enVal = dict.en?.[key];
+    const s = (typeof localVal === 'string' && localVal.trim())
+      ? localVal
+      : (typeof enVal === 'string' && enVal.trim())
+        ? enVal
+        : (fallbackText || key);
+    return String(s).replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined && vars[k] !== null ? String(vars[k]) : ''));
   };
   const langInfo = (code) => languages.find((l) => l.code === code) || languages[0];
   const store = (k, v) => { try { localStorage.setItem(`chatsafe.${k}`, v); } catch { /* ignore */ } };
@@ -806,16 +816,51 @@
   }
 
   /* ---------- Languages (All 23 Indian languages) ---------- */
+  const activeDir = () => (langInfo(uiLang())?.rtl ? 'rtl' : 'ltr');
+
+  function syncDynamicDirections(dir) {
+    const resolved = dir === 'rtl' ? 'rtl' : 'ltr';
+    document.documentElement.dir = resolved;
+    document.body.dir = resolved;
+    [
+      'agentLog', 'heroDynamicCard', 'result', 'urimaiScanResult',
+      'familyKitCard', 'chatLog', 'autoOut', 'payResult', 'xrayStatus',
+      'agentInput', 'message', 'usRegLetter', 'fhRegLetter', 'explanation',
+      'redFlags', 'nextSteps',
+    ].forEach((id) => {
+      const node = $(id);
+      if (node) node.setAttribute('dir', resolved);
+    });
+    document.querySelectorAll('#agentLog li, #chatLog li, .hero-dynamic-card, .urimai-card, .result').forEach((el) => {
+      el.setAttribute('dir', resolved);
+    });
+    // Official English petition blocks always remain LTR
+    if ($('usEngLetter')) $('usEngLetter').setAttribute('dir', 'ltr');
+    if ($('fhEngLetter')) $('fhEngLetter').setAttribute('dir', 'ltr');
+  }
+
   function applyLanguage(code) {
     lang = code === 'auto' || languages.some((l) => l.code === code) ? code : 'en';
     const info = langInfo(uiLang());
+    const dir = info.rtl ? 'rtl' : 'ltr';
     document.documentElement.lang = uiLang();
-    document.documentElement.dir = info.rtl ? 'rtl' : 'ltr';
+    syncDynamicDirections(dir);
+
     document.querySelectorAll('[data-i18n]').forEach((el) => {
-      if (el.id === 'tab-family') return; // preserve badge child
-      el.textContent = t(el.dataset.i18n);
+      const labelSpan = el.querySelector(':scope > .tab-label');
+      const target = labelSpan || el;
+      if (!el.dataset.i18nFallback) {
+        el.dataset.i18nFallback = target.textContent.trim();
+      }
+      const translated = t(el.dataset.i18n, {}, el.dataset.i18nFallback);
+      if (translated) target.textContent = translated;
     });
-    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+      if (!el.dataset.i18nPlaceholderFallback) {
+        el.dataset.i18nPlaceholderFallback = el.placeholder || '';
+      }
+      el.placeholder = t(el.dataset.i18nPlaceholder, {}, el.dataset.i18nPlaceholderFallback);
+    });
     const notes = [];
     if (lang !== 'auto') notes.push(t('uiNote', { lang: `${info.native} (${info.name})` }));
     if (API.mode() === 'local') notes.push(t('offlineMode'));
@@ -943,13 +988,15 @@
 
   /* ---------- Chat & Speed-Dial '9' Voice IVR ---------- */
   function appendChat(logEl, who, cls, text) {
+    const dir = activeDir();
     const li = document.createElement('li');
     li.className = cls;
+    li.dir = dir;
     const tag = document.createElement('span');
     tag.className = 'who';
     tag.textContent = who;
     const body = document.createElement('span');
-    body.dir = 'auto';
+    body.dir = dir;
     body.textContent = text;
     li.append(tag, body);
     logEl.appendChild(li);
@@ -966,15 +1013,17 @@
     const card = $('heroDynamicCard');
     if (!card || !verdict) return;
 
+    const dir = activeDir();
+    card.setAttribute('dir', dir);
     const intent = String(verdict.intent || 'SCAM').toUpperCase();
     const score = Math.max(0, Math.min(100, Math.round(Number(verdict.confidence_score ?? verdict.risk_score) || 0)));
     const vectors = Array.isArray(verdict.threat_vectors) ? verdict.threat_vectors : [];
     const ap = verdict.action_payload || {};
     const sourceBadge = verdict._source === 'edge-byok'
-      ? '🟢 Live Gemini 2.5 Flash'
+      ? 'Live Gemini 2.5 Flash'
       : verdict._source === 'cloud-run'
-        ? '🟢 Live Cloud Run'
-        : '🟡 Mock Fallback Engine';
+        ? 'Live Cloud Run'
+        : 'Mock Fallback Engine';
 
     if (intent === 'CIVIC') {
       const wardText = geoAddress || 'Acquiring live GPS ward coordinates…';
@@ -984,17 +1033,17 @@
       card.hidden = false;
       card.innerHTML = `
         <div class="hdc-head">
-          <span class="pill blue">⚖️ URIMAI CIVIC ENGINE · ${escapeHtml(ap.department_or_agency || 'Municipal Grievance')}</span>
+          <span class="pill blue">URIMAI CIVIC ENGINE · ${escapeHtml(ap.department_or_agency || 'Municipal Grievance')}</span>
           <span class="small muted">${escapeHtml(sourceBadge)} · Confidence ${score}%</span>
         </div>
-        <p style="margin:0;font-weight:700">${escapeHtml(ap.summary || rawText)}</p>
-        <p class="small" style="margin:0">📍 <strong>Live Ward / Coordinates:</strong> <span id="hdcGeoLabel">${escapeHtml(wardText)}</span></p>
+        <p style="margin:0;font-weight:700" dir="${dir}">${escapeHtml(ap.summary || rawText)}</p>
+        <p class="small" style="margin:0"><strong>Live Ward / Coordinates:</strong> <span id="hdcGeoLabel">${escapeHtml(wardText)}</span></p>
         ${vectors.length ? `<div class="hdc-vectors">${vectors.map((v) => `<span class="hdc-vector-chip">${escapeHtml(v)}</span>`).join('')}</div>` : ''}
-        ${draftPreview ? `<pre class="hdc-draft">${escapeHtml(draftPreview)}</pre>` : ''}
-        ${regPreview ? `<pre class="hdc-draft" dir="auto">${escapeHtml(regPreview)}</pre>` : ''}
+        ${draftPreview ? `<pre class="hdc-draft" dir="ltr">${escapeHtml(draftPreview)}</pre>` : ''}
+        ${regPreview ? `<pre class="hdc-draft" dir="${dir}">${escapeHtml(regPreview)}</pre>` : ''}
         <div class="actions" style="margin:0">
-          <button type="button" id="hdcOpenFamilyBtn" class="primary sm">👨‍👩‍👧 Open Family Hub &amp; 5-Sign PDF</button>
-          <button type="button" id="hdcOpenScannerBtn" class="secondary sm">🛡️ View Full Civic Draft</button>
+          <button type="button" id="hdcOpenFamilyBtn" class="primary sm">Open Family Hub &amp; 5-Sign PDF</button>
+          <button type="button" id="hdcOpenScannerBtn" class="secondary sm">View Full Civic Draft</button>
         </div>
       `;
       $('hdcOpenFamilyBtn')?.addEventListener('click', () => activateTab($('tab-family')));
@@ -1011,19 +1060,19 @@
     card.hidden = false;
     card.innerHTML = `
       <div class="hdc-head">
-        <span class="pill ${isThreat ? 'red' : 'green'}">${isThreat ? '🚨 KAVACH SCAM ALERT' : '🛡️ KAVACH SAFE CHECK'} · ${score}/100</span>
+        <span class="pill ${isThreat ? 'red' : 'green'}">${isThreat ? 'KAVACH SCAM ALERT' : 'KAVACH SAFE CHECK'} · ${score}/100</span>
         <span class="small muted">${escapeHtml(sourceBadge)}</span>
       </div>
       <div class="hdc-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${score}" aria-label="Scam risk meter">
         <span style="width:${score}%"></span>
       </div>
-      <p style="margin:0;font-weight:700">${escapeHtml(ap.summary || verdict.details || 'Analysis complete')}</p>
-      ${vectors.length ? `<div class="hdc-vectors">${vectors.map((v) => `<span class="hdc-vector-chip">⚠ ${escapeHtml(v)}</span>`).join('')}</div>` : ''}
-      ${isThreat ? `<pre class="hdc-draft">${escapeHtml(draft)}</pre>` : ''}
+      <p style="margin:0;font-weight:700" dir="${dir}">${escapeHtml(ap.summary || verdict.details || 'Analysis complete')}</p>
+      ${vectors.length ? `<div class="hdc-vectors">${vectors.map((v) => `<span class="hdc-vector-chip">${escapeHtml(v)}</span>`).join('')}</div>` : ''}
+      ${isThreat ? `<pre class="hdc-draft" dir="${dir}">${escapeHtml(draft)}</pre>` : ''}
       <div class="actions" style="margin:0">
-        ${isThreat ? '<button type="button" id="hdcCopy1930Btn" class="primary sm">📋 Copy 1930 Complaint</button>' : ''}
-        ${isThreat ? '<a href="tel:1930" class="button danger sm">📞 Call 1930</a>' : ''}
-        <button type="button" id="hdcFullScanBtn" class="secondary sm">🛡️ Open in AI Scanner</button>
+        ${isThreat ? '<button type="button" id="hdcCopy1930Btn" class="primary sm">Copy 1930 Complaint</button>' : ''}
+        ${isThreat ? '<a href="tel:1930" class="button danger sm">Call 1930</a>' : ''}
+        <button type="button" id="hdcFullScanBtn" class="secondary sm">Open in AI Scanner</button>
       </div>
     `;
     $('hdcCopy1930Btn')?.addEventListener('click', async () => {
