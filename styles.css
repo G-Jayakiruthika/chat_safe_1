@@ -80,11 +80,12 @@ body {
 
 /* ---------- Header ---------- */
 .top {
-  position: sticky; top: 0; z-index: 25;
+  position: sticky; top: 0; z-index: 40;
   display: flex; flex-wrap: wrap; gap: .6rem 1rem; justify-content: space-between; align-items: center; width: 100%;
   min-height: 70px;
   padding: .45rem clamp(1rem, 3.5vw, 2.25rem);
   background: var(--glass); backdrop-filter: blur(14px); border-bottom: 1px solid var(--border);
+  pointer-events: auto;
 }
 .brand { display: flex; gap: .6rem; align-items: center; flex: 0 0 auto; }
 .logo {
@@ -103,7 +104,49 @@ body {
 #soundBtn[aria-pressed="true"] .snd-off { display: block !important; }
 
 /* ---------- Layout ---------- */
-main { flex: 1 0 auto; width: 100%; max-width: 1440px; margin: 0 auto; padding: clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 3.5vw, 2.5rem) clamp(2rem, 5vh, 3.25rem); }
+main { position: relative; z-index: 2; pointer-events: auto; flex: 1 0 auto; width: 100%; max-width: 1440px; margin: 0 auto; padding: clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 3.5vw, 2.5rem) clamp(2rem, 5vh, 3.25rem); }
+button,
+.button,
+a[href],
+summary,
+select,
+[role="button"],
+[role="tab"],
+.chip,
+.feed-tab,
+.region-pill,
+.keypad-key,
+.byok-toggle-vis,
+.consent-agree-btn,
+.case-open,
+.case-del,
+.type-card,
+.agent-card,
+.reel-card,
+.radar-item {
+  cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+  z-index: 4;
+}
+input,
+textarea {
+  cursor: text;
+  pointer-events: auto;
+  position: relative;
+  z-index: 4;
+}
+.hero,
+.hero-dynamic-card,
+.result,
+.urimai-card,
+.card,
+.panel,
+.scan {
+  position: relative;
+  z-index: 3;
+  pointer-events: auto;
+}
 .glass {
   background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow);
@@ -538,6 +581,21 @@ body.searching::after { content: ""; position: fixed; inset: 0; z-index: 29; bac
 @keyframes cur-spin { to { transform: rotate(360deg) } }
 html.has-cursor, html.has-cursor * { cursor: none !important; }
 html.has-cursor input, html.has-cursor textarea { cursor: text !important; }
+html.has-cursor button,
+html.has-cursor a,
+html.has-cursor .button,
+html.has-cursor select,
+html.has-cursor summary,
+html.has-cursor [role="button"],
+html.has-cursor [role="tab"],
+html.has-cursor .chip,
+html.has-cursor .type-card,
+html.has-cursor .agent-card,
+html.has-cursor .reel-card,
+html.has-cursor .byok-toggle-vis {
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
 
 /* ---------- Scroll reveal ---------- */
 .reveal { opacity: 0; transform: translateY(26px); }
@@ -546,10 +604,10 @@ html.has-cursor input, html.has-cursor textarea { cursor: text !important; }
   transition: opacity .7s cubic-bezier(.2,.8,.2,1) var(--d, 0ms), transform .7s cubic-bezier(.2,.8,.2,1) var(--d, 0ms);
 }
 
-/* ---------- Magnetic lean ---------- */
-.btn, .type-card, .ch-card { transition: transform .32s cubic-bezier(.2,.8,.2,1), box-shadow .32s, border-color .32s; }
+/* ---------- Card & Button Stability (No hitbox drift) ---------- */
+.btn, .type-card, .ch-card { transition: transform .22s ease, box-shadow .25s, border-color .25s; }
 @media (pointer: fine) {
-  .btn:hover, .type-card:hover, .ch-card:hover { transform: translate(var(--mx, 0), calc(var(--my, 0px) - 3px)); }
+  .btn:hover, .type-card:hover, .ch-card:hover { transform: translateY(-2px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; }

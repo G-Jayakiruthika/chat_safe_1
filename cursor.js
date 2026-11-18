@@ -12,9 +12,9 @@
 (() => {
   const fine = window.matchMedia('(pointer: fine)').matches;
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let mode = 'orb';
+  let mode = 'system';
   try {
-    mode = localStorage.getItem('chatsafe.cursor') || 'orb';
+    mode = localStorage.getItem('chatsafe.cursor') || 'system';
   } catch { /* ignore */ }
   if (!fine || still) mode = 'system';
 
@@ -232,7 +232,6 @@
     revealOnScroll();
     if (fine && !still) {
       initCursor();
-      magnets();
     }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
