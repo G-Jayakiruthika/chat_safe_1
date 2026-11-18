@@ -1,11 +1,13 @@
-# Small, non-root image for Google Cloud Run. No npm install needed: zero dependencies.
-FROM node:22-alpine
-ENV NODE_ENV=production PORT=8080
-WORKDIR /app
-COPY package.json server.js ./
-COPY src ./src
-COPY tools ./tools
-COPY public ./public
-USER node
+# Lightweight static PWA image for Google Cloud Run (Nginx on port 8080)
+FROM nginx:alpine
+
+# Replace default port-80 server config with Cloud Run port-8080 config
+RUN rm -f /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy all static PWA files into Nginx html root
+COPY public/ /usr/share/nginx/html/
+
 EXPOSE 8080
-CMD ["node", "server.js"]
+
+CMD ["nginx", "-g", "daemon off;"]
