@@ -313,8 +313,10 @@
 
     let rafId = null;
 
-    const ICON_PLAY = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
-    const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>';
+    const ICON_PLAY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l14 8-14 8V4z"/></svg>';
+    const ICON_PAUSE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+    const ICON_DL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>';
+    const ICON_STOP = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5h14v14H5z"/></svg>';
 
     function setPlaying(v) {
       playing = Boolean(v);
@@ -335,6 +337,8 @@
         last = performance.now();
         rafId = requestAnimationFrame(tick);
       } else {
+        window.ChatSafeSound?.stopAll?.();
+        try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
         draw(t);
       }
     }
@@ -388,13 +392,19 @@
         a.download = 'chatsafe-urimai-explainer.webm';
         a.click();
         recorder = null;
-        if (recBtn) recBtn.textContent = '⤓';
+        if (recBtn) recBtn.innerHTML = ICON_DL;
       };
       recorder.start();
-      if (recBtn) recBtn.textContent = '⏹';
+      if (recBtn) recBtn.innerHTML = ICON_STOP;
       t = 0;
       setPlaying(true);
     });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && playing) setPlaying(false);
+    });
+    window.addEventListener('pagehide', () => setPlaying(false));
+    window.ChatSafeExplainerStop = () => setPlaying(false);
 
     draw(0);
   }

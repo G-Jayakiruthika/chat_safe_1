@@ -18,32 +18,40 @@
   <canvas id="bg" class="bg" aria-hidden="true"></canvas>
   <a class="skip" href="#main">Skip to main content</a>
 
-  <!-- Persistent Non-Dismissible Zero-Data-Retention & Edge Privacy Modal -->
+  <!-- Persistent GDPR / ISO Zero-Data-Retention & Edge Privacy Governance Modal -->
   <div id="edgeConsentModal" class="consent-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edgeConsentTitle" aria-describedby="edgeConsentDesc">
     <div class="consent-modal-card glass">
       <div class="consent-modal-badge">
-        <span aria-hidden="true">🛡️</span>
-        <span>ZERO-DATA-RETENTION SECURITY LAYER</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>GDPR / ISO EDGE PRIVACY GOVERNANCE</span>
       </div>
-      <h2 id="edgeConsentTitle">Zero-Data-Retention &amp; Edge Privacy Notice</h2>
+      <h2 id="edgeConsentTitle">Zero-Data-Retention &amp; Edge Privacy Governance</h2>
       <div id="edgeConsentDesc" class="consent-modal-body">
-        <p>Chat_Safe processes all audio and text prompts locally on your device or via volatile session storage (sessionStorage). No personal data, PII, or voice inputs are logged on external servers.</p>
-        <p>Chat_Safe operates on a Zero-Data-Retention, Client-Side Edge architecture. Your voice prompts, chats, and files remain strictly on your device or in volatile session memory. No private data is logged on external servers.</p>
+        <p>Chat_Safe operates on a client-side edge architecture. All voice prompts, text inputs, and case files remain strictly in your browser volatile session storage (sessionStorage) or local device memory. No personal identifiable information (PII) is transmitted or stored on external servers.</p>
       </div>
       <ul class="consent-modal-pillars" aria-label="Security guarantees">
-        <li>🔒 Local-first &amp; volatile <code>sessionStorage</code> execution</li>
-        <li>🎙️ Zero external logging of voice prompts, chats, or files</li>
-        <li>🧪 Automatic PII masking with <code>[REDACTED]</code> tags</li>
+        <li>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span>Volatile <code>sessionStorage</code> &amp; local device execution</span>
+        </li>
+        <li>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Zero server-side PII logging or third-party tracking</span>
+        </li>
       </ul>
       <div class="consent-modal-actions">
-        <button type="button" id="edgeConsentAgreeBtn" class="primary consent-agree-btn">I Agree &amp; Initialize Secure Core</button>
+        <button type="button" id="edgeConsentDeclineBtn" class="secondary consent-decline-btn">Decline</button>
+        <button type="button" id="edgeConsentAgreeBtn" class="primary consent-agree-btn">Accept &amp; Secure Workspace</button>
       </div>
     </div>
   </div>
   <script>
     (() => {
       try {
-        if (sessionStorage.getItem('chatsafe.edgeConsentAccepted') === '1') {
+        if (
+          localStorage.getItem('chatsafe.consentAcceptedAt') ||
+          sessionStorage.getItem('chatsafe.edgeConsentAccepted') === '1'
+        ) {
           const modal = document.getElementById('edgeConsentModal');
           if (modal) modal.hidden = true;
           document.body.classList.remove('consent-locked');
@@ -55,47 +63,75 @@
   </script>
 
   <header class="top">
-    <a class="brand" href="index.html" aria-label="Chat_Safe home">
-      <img src="icon.svg" alt="Chat_Safe × Urimai shield logo" width="40" height="40">
+    <a class="brand" href="index.html" aria-label="Chat_Safe × Urimai home">
+      <img src="icon.svg" alt="Chat_Safe × Urimai shield logo" width="34" height="34">
       <div>
         <p class="logo">Chat<span>_</span>Safe</p>
-        <p class="tagline" data-i18n="tagline">AI Cyber Guardian &amp; Urimai Civic Engine — 23 Indian Languages</p>
+        <p class="tagline" data-i18n="tagline">Kavach × Urimai</p>
       </div>
     </a>
-    <nav class="mainnav" aria-label="Pages">
+    <nav class="mainnav" aria-label="Primary navigation">
       <a href="index.html">Home</a>
-      <a href="app.html" aria-current="page" data-i18n="navApp">Kavach × Urimai</a>
-      <a href="demo.html" data-i18n="navDemo">8 Scams Demo</a>
-      <a href="connect.html" data-i18n="navConnect">Connect apps</a>
-      <a href="account.html" data-i18n="navAccount">Account</a>
+      <a href="index.html#how">About</a>
+      <a href="app.html" aria-current="page" data-i18n="navApp">App</a>
+      <a href="demo.html" data-i18n="navDemo">Demo</a>
+      <a href="account.html" data-i18n="navAccount">Account / Login</a>
     </nav>
-    <div class="controls" role="group" aria-label="Display & language settings">
+    <div class="controls" role="group" aria-label="Display, API &amp; language controls">
       <label for="lang" class="sr-only">Language</label>
       <select id="lang" aria-label="Language" data-tip="Choose any of 23 Indian languages">
         <option value="en">English</option>
       </select>
-      <a href="account.html" id="streakBadge" class="streak"><span class="flame" aria-hidden="true">🔥</span><span id="streakNum">0</span></a>
-      <button type="button" id="historyBtn" class="icon-btn" aria-label="Case files (saved chats)" aria-controls="cases" aria-expanded="false" data-tip="Case files (H)">🗂️</button>
-      <button type="button" id="soundBtn" class="icon-btn" aria-label="Mute sounds" aria-pressed="false" data-tip="Sound effects">🔊</button>
-      <button type="button" id="themeToggle" class="icon-btn" aria-label="Switch theme" data-tip="Switch dark / light theme">
-        <span class="sun" aria-hidden="true">☀️</span><span class="moon" aria-hidden="true">🌙</span>
+      <a href="account.html" id="streakBadge" class="streak" aria-label="Daily streak">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+        <span id="streakNum">0</span>
+      </a>
+      <button type="button" id="historyBtn" class="icon-btn" aria-label="Case files (saved chats)" aria-controls="cases" aria-expanded="false" data-tip="Case files (H)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
       </button>
-      <button type="button" id="btn-settings" class="icon-btn" aria-label="Display & accessibility settings" data-tip="Colours, text size, minimalist style & accessibility">⚙</button>
+      <button type="button" id="soundBtn" class="icon-btn" aria-label="Mute or unmute sound" aria-pressed="false" data-tip="Sound effects">
+        <svg class="snd-on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+        <svg class="snd-off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+      </button>
+      <button type="button" id="themeToggle" class="icon-btn" aria-label="Theme Toggle (Dark / Light mode)" data-tip="Theme Toggle (Dark / Light)">
+        <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+      <button type="button" id="btn-settings" class="icon-btn" aria-label="Settings (App preferences &amp; BYOK configuration)" data-tip="Settings &amp; Accessibility">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+      </button>
       <div class="cursor-picker">
-        <button type="button" id="btn-cursor" class="icon-btn" aria-label="Choose cursor style" data-tip="Cursor style">✦</button>
+        <button type="button" id="btn-cursor" class="icon-btn" aria-label="AI Spark / Engine Status &amp; Cursor style" data-tip="AI Spark / Engine Status">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/></svg>
+        </button>
         <div class="cursor-menu glass" id="cursor-menu" hidden>
           <div class="menu-title">Cursor style</div>
-          <button type="button" data-mode="orb">◎ Orbit ring</button>
-          <button type="button" data-mode="comet">☄ Comet trail</button>
-          <button type="button" data-mode="neon">〰 Neon ribbon</button>
-          <button type="button" data-mode="spark">✺ Spark burst</button>
-          <button type="button" data-mode="system">↖ System default</button>
+          <button type="button" data-mode="orb">Orbit ring</button>
+          <button type="button" data-mode="comet">Comet trail</button>
+          <button type="button" data-mode="neon">Neon ribbon</button>
+          <button type="button" data-mode="spark">Spark burst</button>
+          <button type="button" data-mode="system">System default</button>
         </div>
       </div>
-      <button type="button" id="apiKeySettingsBtn" class="icon-btn" aria-label="API Key Settings (View, Update, or Clear)" data-tip="API Key Settings (BYOK)">🔑</button>
-      <button type="button" id="helpBtn" class="icon-btn" aria-label="Keyboard shortcuts" data-tip="Shortcuts (?)">⌨️</button>
+      <button type="button" id="apiKeySettingsBtn" class="icon-btn" aria-label="API Key Manager (View, Update, or Clear)" data-tip="API Key Manager (BYOK)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><path d="M7.5 20a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z"/></svg>
+      </button>
+      <button type="button" id="helpBtn" class="icon-btn" aria-label="Keyboard shortcuts guide" data-tip="Keyboard Shortcuts (?)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+      </button>
     </div>
   </header>
+
+  <div id="consentDeclinedBanner" class="restriction-banner" role="alert" hidden>
+    <div class="restriction-banner-inner glass">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4M12 16h.01"/></svg>
+      <div>
+        <strong>Workspace Locked — Privacy Consent Declined</strong>
+        <p class="small muted" style="margin:.15rem 0 0">Edge AI processing, voice input, and local case storage are disabled until you accept the Zero-Data-Retention &amp; Edge Privacy Governance policy.</p>
+      </div>
+      <button type="button" id="reopenConsentBtn" class="primary sm">Review &amp; Accept Privacy Governance</button>
+    </div>
+  </div>
 
   <main id="main">
     <!-- Voice Agent + Speed-Dial '9' Keypad Simulator -->
@@ -106,7 +142,7 @@
         <button type="button" id="resetView" class="linkbtn" data-i18n="resetView">↺ Reset view</button>
         <p id="agentState" class="state-pill" role="status" aria-live="polite" data-i18n="state_idle">Ready to help</p>
         <button type="button" id="mic" class="mic" aria-pressed="false">
-          <span class="mic-icon" aria-hidden="true">🎙️</span>
+          <svg class="mic-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>
           <span id="micLabel" data-i18n="micStart">Tap to speak</span>
         </button>
         <label class="toggle"><input type="checkbox" id="autoSpeak" checked> <span data-i18n="autoSpeak">Speak replies</span></label>
@@ -120,9 +156,9 @@
         <div class="panel-head">
           <h1 id="agentTitle" data-i18n="agentTitle">Talk to Kavach &amp; Urimai</h1>
           <div class="head-actions">
-            <button type="button" id="apiKeyManageBtn" class="chip" data-tip="View, update, or clear your Gemini API Key">🔑 API Key</button>
-            <button type="button" id="newChat" class="chip" data-i18n="newChat">＋ New chat</button>
-            <button type="button" id="demoBtn" class="chip demo-chip" data-i18n="demo">▶ Guided demo</button>
+            <button type="button" id="apiKeyManageBtn" class="chip" data-tip="View, update, or clear your Gemini API Key">API Key</button>
+            <button type="button" id="newChat" class="chip" data-i18n="newChat">+ New chat</button>
+            <button type="button" id="demoBtn" class="chip demo-chip" data-i18n="demo">Guided demo</button>
           </div>
         </div>
         <p class="muted" data-i18n="agentIntro">Speak, type, or press Speed-Dial 9 on the keypad phone. Gemini routes cyber scams to Kavach and civic breakdowns to Urimai.</p>
@@ -159,14 +195,14 @@
               <button type="button" class="keypad-key" data-digit="6">6</button>
               <button type="button" class="keypad-key" data-digit="7">7</button>
               <button type="button" class="keypad-key" data-digit="8">8</button>
-              <button type="button" class="keypad-key speed9" data-digit="9" data-tip="Speed-Dial 9: Answer in your chosen Indian language!">9 📞</button>
+              <button type="button" class="keypad-key speed9" data-digit="9" data-tip="Speed-Dial 9: Answer in your chosen Indian language!">9 · IVR</button>
               <button type="button" class="keypad-key" data-digit="*">*</button>
               <button type="button" class="keypad-key" data-digit="0">0</button>
               <button type="button" class="keypad-key" data-digit="#">#</button>
             </div>
             <div class="keypad-scenarios">
-              <button type="button" class="chip sm" id="simScamCall" data-tip="Simulate Scenario A: Bank OTP scam call">🚨 Sim A: OTP Scam</button>
-              <button type="button" class="chip sm" id="simCivicCall" data-tip="Simulate Scenario B: Broken water pipe Urimai handoff">🚰 Sim B: Water Pipe</button>
+              <button type="button" class="chip sm" id="simScamCall" data-tip="Simulate Scenario A: Bank OTP scam call">Sim A: OTP Scam</button>
+              <button type="button" class="chip sm" id="simCivicCall" data-tip="Simulate Scenario B: Broken water pipe Urimai handoff">Sim B: Water Pipe</button>
             </div>
           </aside>
         </div>
@@ -174,12 +210,12 @@
         <!-- Live Multi-Agent Bus Strip -->
         <div class="bus-strip" id="agentBus" aria-label="Live AI Agent Bus">
           <span class="mono small muted bus-label">AGENT BUS:</span>
-          <span class="bus-node active" data-bus="vani">📞 Vani IVR</span>
-          <span class="bus-node" data-bus="gemini">✨ Gemini Router</span>
-          <span class="bus-node" data-bus="kavach">🛡️ Kavach</span>
-          <span class="bus-node" data-bus="urimai">⚖️ Urimai</span>
-          <span class="bus-node" data-bus="netra">🔬 Netra PII</span>
-          <span class="bus-node" data-bus="setu">🤝 Setu O2O</span>
+          <span class="bus-node active" data-bus="vani">Vani IVR</span>
+          <span class="bus-node" data-bus="gemini">Gemini Router</span>
+          <span class="bus-node" data-bus="kavach">Kavach</span>
+          <span class="bus-node" data-bus="urimai">Urimai</span>
+          <span class="bus-node" data-bus="netra">Netra PII</span>
+          <span class="bus-node" data-bus="setu">Setu O2O</span>
         </div>
 
         <!-- Dynamic Red Scam / Blue Urimai Civic Verdict Card -->
@@ -190,18 +226,18 @@
     <!-- Primary + Tool Navigation Tabs (evenly aligned rows) -->
     <div class="tabs-stack reveal" role="tablist" aria-label="Chat_Safe × Urimai Modules">
       <div class="tabs tabs-primary">
-        <button role="tab" id="tab-radar" aria-controls="panel-radar" aria-selected="true" data-i18n="tabRadar">📍 Radar &amp; Video News</button>
-        <button role="tab" id="tab-scanner" aria-controls="panel-scanner" aria-selected="false" tabindex="-1" data-i18n="tabScanner">🛡️ AI Scanner</button>
-        <button role="tab" id="tab-family" aria-controls="panel-family" aria-selected="false" tabindex="-1" data-i18n="tabFamily">👨‍👩‍👧 Family Hub <span id="familyBadge" class="pill blue" hidden>1</span></button>
-        <button role="tab" id="tab-streak" aria-controls="panel-streak" aria-selected="false" tabindex="-1" data-i18n="tabStreak">🔥 Daily Streak</button>
+        <button role="tab" id="tab-radar" aria-controls="panel-radar" aria-selected="true" data-i18n="tabRadar">Radar &amp; Video News</button>
+        <button role="tab" id="tab-scanner" aria-controls="panel-scanner" aria-selected="false" tabindex="-1" data-i18n="tabScanner">AI Scanner</button>
+        <button role="tab" id="tab-family" aria-controls="panel-family" aria-selected="false" tabindex="-1" data-i18n="tabFamily">Family Hub <span id="familyBadge" class="pill blue" hidden>1</span></button>
+        <button role="tab" id="tab-streak" aria-controls="panel-streak" aria-selected="false" tabindex="-1" data-i18n="tabStreak">Daily Streak</button>
       </div>
       <div class="tabs tabs-tools">
-        <button role="tab" id="tab-auto" aria-controls="panel-auto" aria-selected="false" tabindex="-1" data-i18n="tabAuto">🤖 Autopilot</button>
-        <button role="tab" id="tab-pay" aria-controls="panel-pay" aria-selected="false" tabindex="-1" data-i18n="tabPay">✅ Pay-Check</button>
-        <button role="tab" id="tab-paati" aria-controls="panel-paati" aria-selected="false" tabindex="-1" data-i18n="tabPaati">👵 Paati Decoy</button>
-        <button role="tab" id="tab-learn" aria-controls="panel-learn" aria-selected="false" tabindex="-1" data-i18n="tabLearn">🎓 8 Scams</button>
-        <button role="tab" id="tab-google" aria-controls="panel-google" aria-selected="false" tabindex="-1" data-i18n="tabGoogle">☁️ Google &amp; Agents</button>
-        <button role="tab" id="tab-privacy" aria-controls="panel-privacy" aria-selected="false" tabindex="-1">🔒 Data Privacy (ISO)</button>
+        <button role="tab" id="tab-auto" aria-controls="panel-auto" aria-selected="false" tabindex="-1" data-i18n="tabAuto">Autopilot</button>
+        <button role="tab" id="tab-pay" aria-controls="panel-pay" aria-selected="false" tabindex="-1" data-i18n="tabPay">Pay-Check</button>
+        <button role="tab" id="tab-paati" aria-controls="panel-paati" aria-selected="false" tabindex="-1" data-i18n="tabPaati">Paati Decoy</button>
+        <button role="tab" id="tab-learn" aria-controls="panel-learn" aria-selected="false" tabindex="-1" data-i18n="tabLearn">8 Scams</button>
+        <button role="tab" id="tab-google" aria-controls="panel-google" aria-selected="false" tabindex="-1" data-i18n="tabGoogle">Google &amp; Agents</button>
+        <button role="tab" id="tab-privacy" aria-controls="panel-privacy" aria-selected="false" tabindex="-1">Data Privacy (ISO)</button>
       </div>
     </div>
 
@@ -215,7 +251,7 @@
 
         <!-- Region Filter Pills -->
         <div class="region-pills" id="regionPills" role="group" aria-label="Filter Radar by Region">
-          <span class="small muted">📍 Region:</span>
+          <span class="small muted">Region:</span>
           <button type="button" class="region-pill active" data-city="All">All India</button>
           <button type="button" class="region-pill" data-city="Coimbatore">Coimbatore</button>
           <button type="button" class="region-pill" data-city="Chennai">Chennai</button>
@@ -230,13 +266,13 @@
         <div class="feed-switcher">
           <div class="feed-tabs" id="feedModeTabs" role="group" aria-label="Filter feed type">
             <button type="button" class="feed-tab active" data-feed="all">All Feeds</button>
-            <button type="button" class="feed-tab" data-feed="scams">🔥 Trending Scams</button>
-            <button type="button" class="feed-tab" data-feed="civic">⚠️ Civic Watch</button>
-            <button type="button" class="feed-tab" data-feed="video">🎬 Video Reels</button>
+            <button type="button" class="feed-tab" data-feed="scams">Trending Scams</button>
+            <button type="button" class="feed-tab" data-feed="civic">Civic Watch</button>
+            <button type="button" class="feed-tab" data-feed="video">Video Reels</button>
           </div>
           <div class="feed-actions">
-            <button type="button" id="toggleRedaction" class="chip sm" aria-pressed="true" data-tip="Toggle Gemini PII Auto-Redaction">👁️ Gemini [REDACTED] On</button>
-            <button type="button" id="openPublisherBtn" class="button primary sm">⊕ Post Alert Video</button>
+            <button type="button" id="toggleRedaction" class="chip sm" aria-pressed="true" data-tip="Toggle Gemini PII Auto-Redaction">Gemini [REDACTED] On</button>
+            <button type="button" id="openPublisherBtn" class="button primary sm">+ Post Alert Video</button>
           </div>
         </div>
       </div>
@@ -244,8 +280,8 @@
       <!-- Verified User Video Publisher Form (toggles open) -->
       <form id="videoPublisherForm" class="publisher-box" hidden style="margin-bottom:1.1rem">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <strong>✓ Verified Reporter Video Studio</strong>
-          <label class="small"><input type="checkbox" id="pubVerified" checked> Verified Badge ✓</label>
+          <strong>Verified Reporter Video Studio</strong>
+          <label class="small"><input type="checkbox" id="pubVerified" checked> Verified Badge</label>
         </div>
         <input id="pubTitle" type="text" placeholder="Video headline (e.g., Fake courier call alert in RS Puram)" required>
         <div class="pub-meta-grid">
@@ -274,7 +310,7 @@
       <!-- 1. Verified Scam Video News & Reels (3-Column Grid matching screenshot) -->
       <section id="radarVideoSection" class="radar-section" aria-labelledby="videoFeedHeading">
         <div class="radar-section-head">
-          <h3 id="videoFeedHeading">📹 Verified Scam Video News &amp; Reels</h3>
+          <h3 id="videoFeedHeading">Verified Scam Video News &amp; Reels</h3>
           <span class="small muted">Daily visual micro-learning</span>
         </div>
         <div id="reelScroller" class="reels-grid-3" aria-label="Verified Scam Video News and Reels"></div>
@@ -283,13 +319,13 @@
       <!-- 2. Live Scam Threat Scroll -->
       <section id="radarScamSection" class="radar-section" aria-labelledby="scamFeedHeading">
         <div class="radar-section-head">
-          <h3 id="scamFeedHeading">🔥 Live Scam Threat Scroll (Auto-Redacted by Gemini / Netra)</h3>
+          <h3 id="scamFeedHeading">Live Scam Threat Scroll (Auto-Redacted by Gemini / Netra)</h3>
           <span id="radarScamCount" class="small muted"></span>
         </div>
         <div id="radarScamList" class="radar-feed"></div>
 
         <div class="publisher-box" style="margin-top:1rem">
-          <h4 style="margin:0">🔬 Live PII Auto-Redaction Tester</h4>
+          <h4 style="margin:0">Live PII Auto-Redaction Tester</h4>
           <p class="small muted" style="margin:0">Paste any raw SMS with names, phones, Aadhaar or UPI IDs to watch Netra mask personal data with <code>[REDACTED]</code> tags.</p>
           <div style="display:flex;gap:.5rem;flex-wrap:wrap">
             <input id="redactInput" type="text" placeholder="e.g., Dear Ramesh, call +91 98401 22334 or pay ramesh@ybl" style="flex:1;min-width:200px">
@@ -302,7 +338,7 @@
       <!-- 3. Civic Watch -->
       <section id="radarCivicSection" class="radar-section" aria-labelledby="civicFeedHeading">
         <div class="radar-section-head">
-          <h3 id="civicFeedHeading">⚠️ Civic Watch (Anonymized Urimai Issues Nearby)</h3>
+          <h3 id="civicFeedHeading">Civic Watch (Anonymized Urimai Issues Nearby)</h3>
           <span id="radarCivicCount" class="small muted"></span>
         </div>
         <div id="radarCivicList" class="radar-feed"></div>
@@ -320,15 +356,15 @@
         </div>
         <div class="samples" role="group" aria-label="Try an example">
           <span>Try an example:</span>
-          <button type="button" class="chip" data-sample="stock">📈 Stock-tip scam</button>
-          <button type="button" class="chip" data-sample="arrest">🚔 Digital arrest</button>
-          <button type="button" class="chip" data-sample="water">🚰 Broken water pipe (Urimai)</button>
-          <button type="button" class="chip" data-sample="road">🛣️ Broken road (Urimai)</button>
-          <button type="button" class="chip" data-sample="safe">✅ Safe message</button>
+          <button type="button" class="chip" data-sample="stock">Stock-tip scam</button>
+          <button type="button" class="chip" data-sample="arrest">Digital arrest</button>
+          <button type="button" class="chip" data-sample="water">Broken water pipe (Urimai)</button>
+          <button type="button" class="chip" data-sample="road">Broken road (Urimai)</button>
+          <button type="button" class="chip" data-sample="safe">Safe message</button>
         </div>
         <div class="actions">
           <button type="submit" class="primary" id="analyzeBtn" data-i18n="scanBtn">Smart Scan (Kavach / Urimai)</button>
-          <button type="button" id="scannerMicBtn" class="secondary">🎙️ Speak to Scan</button>
+          <button type="button" id="scannerMicBtn" class="secondary">Speak to Scan</button>
         </div>
       </form>
       <div id="xrayStatus" class="status" role="status" aria-live="polite"></div>
@@ -346,12 +382,12 @@
           </div>
         </div>
         <div id="safebrowsing-widget" class="api-status-widget hidden" aria-live="polite">
-          <span aria-hidden="true">🛡️</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           <strong>Google Safe Browsing Check:</strong>
           <span id="url-threat-status">Scanning links...</span>
         </div>
         <p id="explanation" dir="auto"></p>
-        <button type="button" id="readAloud" class="secondary sm">🔊 Read aloud</button>
+        <button type="button" id="readAloud" class="secondary sm">Read aloud</button>
         <h4>Warning signs found</h4>
         <ul id="redFlags" class="flags" dir="auto"></ul>
         <h4>What to do now</h4>
@@ -365,9 +401,9 @@
           <textarea id="complaint" rows="7" readonly></textarea>
           <div class="actions">
             <button type="button" id="copyComplaint" class="secondary">Copy 1930 Draft</button>
-            <a id="familyAlert" class="button secondary" target="_blank" rel="noopener noreferrer">👨‍👩‍👧 Alert family on WhatsApp</a>
+            <a id="familyAlert" class="button secondary" target="_blank" rel="noopener noreferrer">Alert family on WhatsApp</a>
             <a class="button secondary" href="https://cybercrime.gov.in" target="_blank" rel="noopener noreferrer">File at cybercrime.gov.in</a>
-            <a class="button danger" href="tel:1930">📞 Call 1930</a>
+            <a class="button danger" href="tel:1930">Call 1930</a>
           </div>
         </div>
         <p id="engine" class="muted small"></p>
@@ -377,18 +413,18 @@
       <article id="urimaiScanResult" class="urimai-card" hidden style="margin-top:1rem">
         <div style="display:flex;justify-content:space-between;align-items:start;gap:.8rem;flex-wrap:wrap">
           <div>
-            <span class="pill blue">⚖️ URIMAI CIVIC ENGINE ACTIVATED</span>
+            <span class="pill blue">URIMAI CIVIC ENGINE ACTIVATED</span>
             <h3 id="usDept" style="margin:.4rem 0 .2rem">Municipal Water Board</h3>
             <p id="usSummary" class="muted" style="margin:0"></p>
             <div id="maps-status-badge" class="api-status-widget civic hidden" aria-live="polite">
-              <span aria-hidden="true">📍</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
               <strong>Google Maps Geolocation:</strong>
               <span id="detected-address">Acquiring precise location...</span>
             </div>
           </div>
           <div class="actions" style="margin:0">
-            <button type="button" id="sendToFamilyBtn" class="primary">📲 Send to Family Hub Action Kit</button>
-            <button type="button" id="usDownloadPdfBtn" class="secondary">📄 Download Bilingual PDF</button>
+            <button type="button" id="sendToFamilyBtn" class="primary">Send to Family Hub Action Kit</button>
+            <button type="button" id="usDownloadPdfBtn" class="secondary">Download Bilingual PDF</button>
           </div>
         </div>
         <div class="bilingual-grid">
@@ -404,7 +440,7 @@
       </article>
 
       <div style="margin-top:1.2rem">
-        <h3 style="margin:0 0 .5rem">🕒 Recent Scan History (Scam &amp; Civic)</h3>
+        <h3 style="margin:0 0 .5rem">Recent Scan History (Scam &amp; Civic)</h3>
         <ul id="scanHistoryList" class="learn-list"></ul>
       </div>
     </section>
@@ -417,12 +453,12 @@
       <!-- Flashing Red SOS Alert (when parent speed-dials 9 on a scam) -->
       <div id="familySosBanner" class="sos-banner" hidden role="alert">
         <div>
-          <strong>🚨 LIVE SOS: Linked Parent Speed-Dialed '9' About a Scam!</strong>
+          <strong>LIVE SOS: Linked Parent Speed-Dialed '9' About a Scam!</strong>
           <p id="sosDetails" style="margin:.2rem 0 0"></p>
         </div>
         <div class="actions" style="margin:0">
-          <button type="button" id="sosPlayVoice" class="secondary sm">🔊 Play Parent's Voice</button>
-          <a href="tel:1930" class="button danger sm">📞 Call 1930</a>
+          <button type="button" id="sosPlayVoice" class="secondary sm">Play Parent's Voice</button>
+          <a href="tel:1930" class="button danger sm">Call 1930</a>
           <button type="button" id="sosDismiss" class="chip sm">Resolve</button>
         </div>
       </div>
@@ -431,13 +467,13 @@
       <div class="urimai-card" id="familyKitCard">
         <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:.75rem">
           <div>
-            <span class="pill blue" id="fhKitBadge">🚨 FAMILY REQUEST: URIMAI DRAFT READY</span>
+            <span class="pill blue" id="fhKitBadge">FAMILY REQUEST: URIMAI DRAFT READY</span>
             <h3 id="fhKitTitle" style="margin:.45rem 0 .2rem">Broken Panchayat Water Pipe — Ward 12</h3>
             <p class="small muted" style="margin:0">From: <strong id="fhReporter">Appa (Keypad Phone — Speed Dial 9)</strong> · Department: <strong id="fhDept">Municipal Water Board</strong></p>
           </div>
           <div class="actions" style="margin:0">
-            <button type="button" id="fhPlayAudio" class="secondary sm">🔊 Play Father's Voice Recording</button>
-            <button type="button" id="fhSwitchSample" class="chip sm">🔄 Load Sample Road Issue</button>
+            <button type="button" id="fhPlayAudio" class="secondary sm">Play Father's Voice Recording</button>
+            <button type="button" id="fhSwitchSample" class="chip sm">Load Sample Road Issue</button>
           </div>
         </div>
 
@@ -455,7 +491,7 @@
         <!-- O2O Multi-Modal Steps -->
         <div class="kit-grid">
           <div class="kit-step">
-            <h4>1. 📷 Upload Street Photo</h4>
+            <h4>1. Upload Street Photo</h4>
             <p class="small muted" style="margin:0">Snap or pick a photo of the broken pipe/road. Urimai embeds it directly into the legal PDF.</p>
             <label class="button secondary" style="cursor:pointer">
               Choose / Snap Photo
@@ -466,14 +502,14 @@
           </div>
 
           <div class="kit-step">
-            <h4>2. 📄 Generate Bilingual PDF</h4>
+            <h4>2. Generate Bilingual PDF</h4>
             <p class="small muted" style="margin:0">Includes English + regional petition, embedded photo, and the <strong>5-Resident Signature Table</strong>.</p>
             <button type="button" id="fhPdfBtn" class="primary">Download Urimai PDF</button>
             <p id="fhOfflineInstr" class="small muted" style="margin:0"></p>
           </div>
 
           <div class="kit-step">
-            <h4>3. 💬 Share to WhatsApp</h4>
+            <h4>3. Share to WhatsApp</h4>
             <p class="small muted" style="margin:0">Send the kit summary or Local Proxy request directly to family or neighbors on WhatsApp.</p>
             <a id="fhWaBtn" class="button secondary" target="_blank" rel="noopener noreferrer">Share to WhatsApp</a>
           </div>
@@ -481,37 +517,37 @@
 
         <!-- Location-Aware Pathway Switch: Same Town vs Different City (Solution 1 & Solution 2) -->
         <div style="border-top:1px solid var(--border);padding-top:.85rem">
-          <p class="label" style="margin:0 0 .4rem">📍 Are you currently in the same town as your parent to take a photo &amp; deliver the printout?</p>
+          <p class="label" style="margin:0 0 .4rem">Are you currently in the same town as your parent to take a photo &amp; deliver the printout?</p>
           <div class="pathway-bar">
-            <button type="button" class="chip" id="pathLocalBtn" aria-pressed="true">✅ Yes — O2O Print + 5 Signatures</button>
-            <button type="button" class="chip" id="pathDigitalBtn" aria-pressed="false">🏛️ Solution 1: Digital-First CM Portal Bypass</button>
-            <button type="button" class="chip" id="pathProxyBtn" aria-pressed="false">🤝 Solution 2: No — Ask a Local Proxy (WhatsApp)</button>
+            <button type="button" class="chip" id="pathLocalBtn" aria-pressed="true">Yes — O2O Print + 5 Signatures</button>
+            <button type="button" class="chip" id="pathDigitalBtn" aria-pressed="false">Solution 1: Digital-First CM Portal Bypass</button>
+            <button type="button" class="chip" id="pathProxyBtn" aria-pressed="false">Solution 2: No — Ask a Local Proxy (WhatsApp)</button>
           </div>
 
           <!-- Solution 1: Digital-First Bypass (CM Helpline / CPGRAMS) -->
           <div id="digitalBypassBox" class="pathway-card" hidden>
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
-              <strong>🏛️ Solution 1: Digital-First Bypass (Submit from Hostel / Another City)</strong>
+              <strong>Solution 1: Digital-First Bypass (Submit from Hostel / Another City)</strong>
               <select id="portalStateSelect" aria-label="Select State Portal"></select>
             </div>
             <p class="small muted" style="margin:0">Bypass the local Panchayat completely by filing directly on <strong id="portalNameLabel">Mudhalvarin Mugavari (TN CM Helpline)</strong> (Helpline: <code id="portalHelpline">1100</code>).</p>
             <textarea id="portalCopyArea" rows="3" readonly></textarea>
             <div class="actions" style="margin:0">
-              <button type="button" id="copyPortalTextBtn" class="primary sm">📋 1-Click Copy Portal Text</button>
-              <a id="openPortalBtn" class="button secondary sm" target="_blank" rel="noopener noreferrer">🌐 Open Official Govt Portal →</a>
-              <a id="openSecondaryPortalBtn" class="button secondary sm" target="_blank" rel="noopener noreferrer">📱 Secondary Portal</a>
+              <button type="button" id="copyPortalTextBtn" class="primary sm">1-Click Copy Portal Text</button>
+              <a id="openPortalBtn" class="button secondary sm" target="_blank" rel="noopener noreferrer">Open Official Govt Portal →</a>
+              <a id="openSecondaryPortalBtn" class="button secondary sm" target="_blank" rel="noopener noreferrer">Secondary Portal</a>
             </div>
           </div>
 
           <!-- Solution 2: Local Proxy WhatsApp Handoff -->
           <div id="localProxyBox" class="pathway-card" hidden>
-            <strong>🤝 Solution 2: Local Proxy Handoff (Neighbor / Auto Driver / Village e-Seva CSC)</strong>
+            <strong>Solution 2: Local Proxy Handoff (Neighbor / Auto Driver / Village e-Seva CSC)</strong>
             <p class="small muted" style="margin:0">Forward this unique secure link to a neighbor or CSC operator near your parent. When they tap it, they can snap the photo and download the print-ready PDF locally!</p>
             <input id="proxyLinkInput" type="text" readonly>
             <div class="actions" style="margin:0">
-              <a id="proxyWaSendBtn" class="button primary sm" target="_blank" rel="noopener noreferrer">💬 Forward WhatsApp Proxy Link</a>
-              <button type="button" id="copyProxyLinkBtn" class="secondary sm">📋 Copy Link</button>
-              <a id="previewProxyPageBtn" class="button secondary sm" target="_blank" rel="noopener noreferrer">📷 Open Proxy Camera Page →</a>
+              <a id="proxyWaSendBtn" class="button primary sm" target="_blank" rel="noopener noreferrer">Forward WhatsApp Proxy Link</a>
+              <button type="button" id="copyProxyLinkBtn" class="secondary sm">Copy Link</button>
+              <a id="previewProxyPageBtn" class="button secondary sm" target="_blank" rel="noopener noreferrer">Open Proxy Camera Page →</a>
             </div>
           </div>
         </div>
@@ -539,9 +575,9 @@
     <section id="panel-streak" role="tabpanel" aria-labelledby="tab-streak" class="panel glass" hidden>
       <p class="eyebrow" style="margin:0">TAB 4 // DAILY HABIT-FORMING MICRO-LEARNING</p>
       <div class="g-top">
-        <p class="g-hud"><span id="gHearts" class="g-hearts" role="status">❤️❤️❤️</span></p>
-        <p class="g-hud"><span aria-hidden="true">🔥</span> <span data-i18n="gStreak">Streak</span> <strong id="gStreak">0</strong></p>
-        <p class="g-hud"><span aria-hidden="true">⭐</span> <span data-i18n="gScore">Score</span> <strong id="gScore">0</strong></p>
+        <p class="g-hud"><span id="gHearts" class="g-hearts" role="status">3 / 3 Lives</span></p>
+        <p class="g-hud"><span data-i18n="gStreak">Streak</span> <strong id="gStreak">0</strong></p>
+        <p class="g-hud"><span data-i18n="gScore">Score</span> <strong id="gScore">0</strong></p>
       </div>
       <div id="gProgress" class="g-progress" role="progressbar" aria-label="Cards played" aria-valuemin="0" aria-valuenow="0" aria-valuemax="8"></div>
       <div id="gameBoard" class="g-board">
@@ -552,8 +588,14 @@
         </article>
         <div id="gResult" class="g-result" hidden aria-live="polite"></div>
         <div class="g-choices">
-          <button type="button" id="gScam" class="g-btn g-btn-scam"><span class="g-btn-ico">⚠️</span><span data-i18n="gScam">SCAM</span></button>
-          <button type="button" id="gSafe" class="g-btn g-btn-safe"><span class="g-btn-ico">🛡️</span><span data-i18n="gSafe">SAFE</span></button>
+          <button type="button" id="gScam" class="g-btn g-btn-scam">
+            <svg class="g-btn-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/></svg>
+            <span data-i18n="gScam">SCAM</span>
+          </button>
+          <button type="button" id="gSafe" class="g-btn g-btn-safe">
+            <svg class="g-btn-ico" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+            <span data-i18n="gSafe">SAFE</span>
+          </button>
         </div>
         <p class="help g-hint" data-i18n="gHint">Swipe the card left for SCAM, right for SAFE — or use the buttons.</p>
       </div>
@@ -579,7 +621,7 @@
           <label class="sw"><input type="checkbox" id="auReport"><span></span><b>Prepare 1930 report</b></label>
         </fieldset>
         <div class="actions">
-          <button type="submit" class="primary" id="autoRun">🤖 Run Autopilot</button>
+          <button type="submit" class="primary" id="autoRun">Run Autopilot</button>
           <button type="button" class="secondary" id="autoSample">Fill example pile</button>
         </div>
       </form>
@@ -612,7 +654,7 @@
     <section id="panel-learn" role="tabpanel" aria-labelledby="tab-learn" class="panel glass" hidden>
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
         <p style="margin:0">Tap any card to test that exact scam in AI Scanner, or open the <a href="demo.html">Sticky Scroll 3D Demo</a>.</p>
-        <a href="demo.html" class="button secondary sm">📱 Open Sticky Demo</a>
+        <a href="demo.html" class="button secondary sm">Open Sticky Demo</a>
       </div>
       <div id="typeGrid" class="type-grid"></div>
     </section>
@@ -624,36 +666,36 @@
 
       <div class="google-grid">
         <article class="google-card">
-          <h3>✨ Google Gemini 2.5 Flash</h3>
+          <h3>Google Gemini 2.5 Flash</h3>
           <p class="small muted">Structured JSON Intent Classification (Scam vs Civic), Bilingual Urimai Legal Drafting, PII Auto-Redaction, and Kamala Paati Decoy.</p>
           <span class="pill green" id="geminiStatusPill">Offline + Live Ready</span>
         </article>
         <article class="google-card">
-          <h3>🎙️ Web Speech &amp; Google TTS</h3>
+          <h3>Web Speech &amp; Google TTS</h3>
           <p class="small muted">Hands-free speech recognition &amp; 23-language voice synthesis powering Kavach &amp; Speed-Dial '9' IVR handoffs.</p>
         </article>
         <article class="google-card">
-          <h3>📍 Google Maps &amp; Ward Locator</h3>
+          <h3>Google Maps &amp; Ward Locator</h3>
           <p class="small muted">Pinpoints parent's Ward/Panchayat and checks if you are remote to trigger CM Helpline Bypass.</p>
-          <button type="button" id="detectLocationBtn" class="secondary sm">📍 Detect My Ward / GPS</button>
+          <button type="button" id="detectLocationBtn" class="secondary sm">Detect My Ward / GPS</button>
           <p id="geoStatus" class="small muted" style="margin:0"></p>
         </article>
         <article class="google-card">
-          <h3>📧 Gmail &amp; Google Docs Export</h3>
+          <h3>Gmail &amp; Google Docs Export</h3>
           <p class="small muted">1-click Gmail draft to Municipal Commissioner / Cyber Cell or export Urimai petition for Google Docs.</p>
-          <button type="button" id="gmailDraftBtn" class="secondary sm">✉️ Open Gmail Petition Draft</button>
+          <button type="button" id="gmailDraftBtn" class="secondary sm">Open Gmail Petition Draft</button>
         </article>
         <article class="google-card">
-          <h3>📱 Android PWA Share Target</h3>
+          <h3>Android PWA Share Target</h3>
           <p class="small muted">Installable PWA with <code>share_target</code>: share suspicious WhatsApp messages directly into Chat_Safe from Android.</p>
         </article>
         <article class="google-card">
-          <h3>☁️ Google Cloud Run Ready</h3>
+          <h3>Google Cloud Run Ready</h3>
           <p class="small muted">Containerized via <code>Dockerfile</code> with strict CSP, rate limiting, and webhook signature verification.</p>
         </article>
       </div>
 
-      <h3 style="margin:1.5rem 0 .4rem">🤖 Meet the 8 AI Agents</h3>
+      <h3 style="margin:1.5rem 0 .4rem">Meet the 8 AI Agents</h3>
       <div id="appAgentGrid" class="agent-grid"></div>
     </section>
 
@@ -665,7 +707,7 @@
 
       <div class="iso-grid">
         <form id="privacyProfileForm" class="google-card" novalidate style="display:grid;gap:.65rem">
-          <h3 style="margin:0">📝 Verified Citizen Info &amp; Consent Vault</h3>
+          <h3 style="margin:0">Verified Citizen Info &amp; Consent Vault</h3>
           <input type="text" name="website" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
           <label for="privName" class="small">Full Name (Required)</label>
           <input id="privName" name="name" maxlength="60" required autocomplete="name" placeholder="e.g., Meenakshi Sundaram">
@@ -690,35 +732,35 @@
           </label>
 
           <div class="actions" style="margin:.2rem 0 0">
-            <button type="submit" class="primary">💾 Save Encrypted Profile &amp; Consent</button>
+            <button type="submit" class="primary">Save Encrypted Profile &amp; Consent</button>
           </div>
           <p id="privacyFormStatus" class="status" role="status" aria-live="polite" style="margin:0"></p>
         </form>
 
         <div class="google-card" style="display:grid;gap:.7rem;align-content:start">
-          <h3 style="margin:0">🛡️ Your ISO 27701 Rights &amp; Audits</h3>
+          <h3 style="margin:0">Your ISO 27701 Rights &amp; Audits</h3>
           <p class="small muted" style="margin:0">Exercise Access, Portability, Opt-Out, or Permanent Erasure anytime:</p>
           <div class="actions" style="margin:0">
-            <button type="button" id="privacyExportBtn" class="secondary">⬇ Export My Data (JSON)</button>
-            <button type="button" id="privacyUnsubBtn" class="secondary">🔕 Unsubscribe Alerts</button>
-            <button type="button" id="privacyDeleteBtn" class="danger">🗑️ Delete Account &amp; Erase Data</button>
+            <button type="button" id="privacyExportBtn" class="secondary">Export My Data (JSON)</button>
+            <button type="button" id="privacyUnsubBtn" class="secondary">Unsubscribe Alerts</button>
+            <button type="button" id="privacyDeleteBtn" class="danger">Delete Account &amp; Erase Data</button>
           </div>
           <p id="privacyRightsStatus" class="small muted" role="status" aria-live="polite" style="margin:0"></p>
 
           <details>
             <summary><strong>Privacy, Terms, Refund (₹0 Free) &amp; Cookie Policy</strong></summary>
-            <p class="small" style="margin:.45rem 0">100% Free Citizen Service — ₹0 fees, zero hidden charges, zero fake reviews. Optional future partner services carry a 7-day 100% refund guarantee. Strict security cookies only (`cs_session` HttpOnly, `cs_csrf` SameSite=Strict).</p>
+            <p class="small" style="margin:.45rem 0">100% Free Citizen Service — ₹0 fees, zero hidden charges, zero fake reviews. Optional future partner services carry a 7-day 100% refund guarantee. Strict security cookies only (<code>cs_session</code> HttpOnly, <code>cs_csrf</code> SameSite=Strict).</p>
           </details>
           <details>
             <summary><strong>Security Controls &amp; Third-Party / Asset Audit</strong></summary>
             <ul class="small" style="margin:.4rem 0 0;padding-left:1.2rem">
               <li>Argon2id password hashing + 15-min expiring SHA-256 reset tokens.</li>
-              <li>Parameterized SQLite WAL (`busy_timeout=5000`) + CSRF + CORS + Rate Limits + Overload Shedding (`503`).</li>
-              <li>Zero ad/analytics SDKs; all icons &amp; Canvas visuals are original/licensed (`icon.svg`).</li>
+              <li>Parameterized SQLite WAL (<code>busy_timeout=5000</code>) + CSRF + CORS + Rate Limits + Overload Shedding (<code>503</code>).</li>
+              <li>Zero ad/analytics SDKs; all icons &amp; Canvas visuals are original/licensed (<code>icon.svg</code>).</li>
               <li>Business Contact: Chat_Safe × Urimai Initiative, Coimbatore · <code>privacy@chatsafe.in</code>.</li>
             </ul>
           </details>
-          <a class="button secondary sm" href="privacy.html">📄 Open Full Legal &amp; Compliance Page</a>
+          <a class="button secondary sm" href="privacy.html">Open Full Legal &amp; Compliance Page</a>
         </div>
       </div>
     </section>
@@ -729,8 +771,12 @@
     <form id="searchForm" role="search">
       <label for="caseSearch" class="sr-only">Search saved chats</label>
       <input id="caseSearch" type="search" autocomplete="off" placeholder="Search saved chats">
-      <button type="submit" class="icon-btn" aria-label="Search">🔍</button>
-      <button type="button" id="closeSearch" class="icon-btn" aria-label="Close search">✕</button>
+      <button type="submit" class="icon-btn" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.35-4.35"/></svg>
+      </button>
+      <button type="button" id="closeSearch" class="icon-btn" aria-label="Close search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
     </form>
   </div>
 
@@ -738,14 +784,16 @@
     <div class="marquee" aria-hidden="true"><span>CASE FILES · STORED ON THIS DEVICE ONLY · SEARCH ANY WORD ·&nbsp;</span><span>CASE FILES · STORED ON THIS DEVICE ONLY · SEARCH ANY WORD ·&nbsp;</span></div>
     <div class="drawer-head">
       <h2 id="casesTitle">Case files</h2>
-      <button type="button" id="closeCases" class="icon-btn" aria-label="Close case files">✕</button>
+      <button type="button" id="closeCases" class="icon-btn" aria-label="Close case files">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
     </div>
-    <button type="button" id="openSearch" class="secondary wide">🔍 Search saved chats</button>
+    <button type="button" id="openSearch" class="secondary wide">Search saved chats</button>
     <p id="caseCount" class="muted small" role="status" aria-live="polite"></p>
     <ul id="caseList" class="case-list"></ul>
     <div class="actions">
-      <button type="button" id="exportCases" class="secondary">⬇ Export</button>
-      <button type="button" id="clearCases" class="secondary">🗑 Clear all</button>
+      <button type="button" id="exportCases" class="secondary">Export</button>
+      <button type="button" id="clearCases" class="secondary">Clear all</button>
     </div>
     <p class="muted small">Saved only in this browser. Nothing is uploaded.</p>
   </aside>
@@ -764,7 +812,7 @@
   </dialog>
 
   <div id="cookieConsentBanner" class="cookie-banner" role="region" aria-label="Cookie preferences" hidden>
-    <p><strong>🍪 Cookie &amp; Privacy Notice (No Dark Patterns):</strong> Chat_Safe uses strictly necessary security cookies (<code>cs_session</code>, <code>cs_csrf</code>). Optional UI preferences (theme/streak) are saved locally only with your choice. <a href="privacy.html#cookie-policy">Cookie Policy</a></p>
+    <p><strong>Cookie &amp; Privacy Notice:</strong> Chat_Safe uses strictly necessary security cookies (<code>cs_session</code>, <code>cs_csrf</code>). Optional UI preferences (theme/streak) are saved locally only with your choice. <a href="privacy.html#cookie-policy">Cookie Policy</a></p>
     <div style="display:flex;gap:.5rem;flex-wrap:wrap">
       <button type="button" id="cookieEssentialBtn" class="secondary sm">Essential Only</button>
       <button type="button" id="cookieAcceptBtn" class="primary sm">Accept Essential + Preferences</button>
@@ -774,7 +822,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <footer class="foot">
-    <p>Chat_Safe × Urimai · <a href="index.html">Home</a> · <a href="demo.html">8 Scams Demo</a> · <a href="privacy.html">Privacy, Terms &amp; Refund Policy</a> · <button type="button" id="openCookiePrefsBtn" class="linkbtn">🍪 Cookie Preferences</button> · Emergency: <a href="tel:1930">1930</a> · <a href="tel:112">112</a></p>
+    <p>Chat_Safe × Urimai · <a href="privacy.html">Privacy Policy</a> · <button type="button" id="openCookiePrefsBtn" class="linkbtn">Cookie Preferences</button> · Emergency: <a href="tel:1930">1930</a> · <a href="tel:112">112</a></p>
   </footer>
 
   <script src="i18n.js" defer></script>

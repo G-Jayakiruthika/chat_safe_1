@@ -4,6 +4,7 @@
 window.ChatSafeSound = (() => {
   let ctx = null;
   let muted = false;
+  const activeOscs = new Set();
   try {
     muted = localStorage.getItem('chatsafe.muted') === '1';
   } catch {
@@ -28,8 +29,30 @@ window.ChatSafeSound = (() => {
     g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     osc.connect(g).connect(c.destination);
+    activeOscs.add(osc);
+    osc.onended = () => {
+      activeOscs.delete(osc);
+      try { g.disconnect(); } catch { /* ignore */ }
+    };
     osc.start(t0);
     osc.stop(t0 + dur + 0.02);
+  }
+
+  function stopAll() {
+    for (const osc of [...activeOscs]) {
+      try {
+        osc.stop(0);
+        osc.disconnect();
+      } catch {
+        /* already stopped */
+      }
+      activeOscs.delete(osc);
+    }
+    try {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    } catch {
+      /* ignore */
+    }
   }
 
   const DTMF = {
@@ -70,6 +93,7 @@ window.ChatSafeSound = (() => {
     },
     toggle() {
       muted = !muted;
+      if (muted) stopAll();
       try {
         localStorage.setItem('chatsafe.muted', muted ? '1' : '0');
       } catch {
@@ -77,6 +101,7 @@ window.ChatSafeSound = (() => {
       }
       return muted;
     },
+    stopAll,
     get muted() {
       return muted;
     },

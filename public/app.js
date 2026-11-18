@@ -55,16 +55,31 @@
   }
 
   /* =========================================================================
-   * ZERO-DATA-RETENTION & EDGE PRIVACY CONSENT GATE (NON-DISMISSIBLE)
+   * ZERO-DATA-RETENTION & EDGE PRIVACY CONSENT GATE (GDPR / ISO)
    * ========================================================================= */
   const CONSENT_STORAGE_KEY = 'chatsafe.edgeConsentAccepted';
+  const CONSENT_TS_KEY = 'chatsafe.consentAcceptedAt';
+
   function hasEdgeConsent() {
-    try { return sessionStorage.getItem(CONSENT_STORAGE_KEY) === '1'; } catch { return false; }
+    try {
+      return Boolean(localStorage.getItem(CONSENT_TS_KEY)) || sessionStorage.getItem(CONSENT_STORAGE_KEY) === '1';
+    } catch {
+      return false;
+    }
   }
 
-  function setAppRegionsLocked(locked) {
-    document.body.classList.toggle('consent-locked', locked);
-    document.querySelectorAll('body > header, body > main, body > footer').forEach((el) => {
+  function setAppRegionsLocked(locked, mainOnly = false) {
+    document.body.classList.toggle('consent-locked', locked && !mainOnly);
+    const mainEl = $('main');
+    if (mainEl) mainEl.classList.toggle('app-restricted', locked && mainOnly);
+    const selector = mainOnly ? 'body > main' : 'body > header, body > main, body > footer';
+    if (mainOnly) {
+      document.querySelectorAll('body > header, body > footer').forEach((el) => {
+        el.removeAttribute('inert');
+        el.removeAttribute('aria-hidden');
+      });
+    }
+    document.querySelectorAll(selector).forEach((el) => {
       if (locked) {
         el.setAttribute('inert', '');
         el.setAttribute('aria-hidden', 'true');
@@ -75,25 +90,51 @@
     });
   }
 
+  function killAllAudio() {
+    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+    try { Sound.stopAll?.(); } catch { /* ignore */ }
+    try { window.ChatSafeReels?.stopAll?.(); } catch { /* ignore */ }
+    try { window.ChatSafeExplainerStop?.(); } catch { /* ignore */ }
+    document.querySelectorAll('video, audio').forEach((mediaEl) => {
+      try {
+        if (!mediaEl.paused) mediaEl.pause();
+        mediaEl.muted = true;
+      } catch { /* ignore */ }
+    });
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) killAllAudio(); });
+  window.addEventListener('pagehide', killAllAudio);
+
   let edgeConsentPromise = null;
+  let resolveEdgeConsent = null;
   function initEdgeConsentGate() {
     const modal = $('edgeConsentModal');
     const agreeBtn = $('edgeConsentAgreeBtn');
+    const declineBtn = $('edgeConsentDeclineBtn');
+    const declinedBanner = $('consentDeclinedBanner');
+    const reopenBtn = $('reopenConsentBtn');
     if (!modal || !agreeBtn) return Promise.resolve();
 
     if (hasEdgeConsent()) {
       modal.hidden = true;
+      if (declinedBanner) declinedBanner.hidden = true;
       setAppRegionsLocked(false);
       return Promise.resolve();
     }
 
     if (edgeConsentPromise) return edgeConsentPromise;
 
-    modal.hidden = false;
-    setAppRegionsLocked(true);
-    agreeBtn.focus();
+    const openConsentModal = () => {
+      modal.hidden = false;
+      if (declinedBanner) declinedBanner.hidden = true;
+      setAppRegionsLocked(true, false);
+      agreeBtn.focus();
+    };
+
+    reopenBtn?.addEventListener('click', openConsentModal);
 
     edgeConsentPromise = new Promise((resolve) => {
+      resolveEdgeConsent = resolve;
       const preventDismiss = (e) => {
         if (modal.hidden) return;
         if (e.key === 'Escape') {
@@ -114,21 +155,36 @@
         }
       });
 
+      declineBtn?.addEventListener('click', () => {
+        killAllAudio();
+        try { sessionStorage.setItem('chatsafe.edgeConsentDeclined', '1'); } catch { /* ignore */ }
+        modal.hidden = true;
+        setAppRegionsLocked(true, true);
+        if (declinedBanner) declinedBanner.hidden = false;
+        reopenBtn?.focus();
+      });
+
       agreeBtn.addEventListener('click', () => {
+        const ts = new Date().toISOString();
         try {
+          localStorage.setItem(CONSENT_TS_KEY, ts);
+          localStorage.setItem('chatsafe.consentStatus', 'accepted');
           sessionStorage.setItem(CONSENT_STORAGE_KEY, '1');
-          sessionStorage.setItem('chatsafe.edgeConsentAt', new Date().toISOString());
+          sessionStorage.setItem('chatsafe.edgeConsentAt', ts);
+          sessionStorage.removeItem('chatsafe.edgeConsentDeclined');
         } catch { /* ignore storage restrictions */ }
         document.removeEventListener('keydown', preventDismiss, true);
         modal.hidden = true;
+        if (declinedBanner) declinedBanner.hidden = true;
         setAppRegionsLocked(false);
         Sound.play('safe');
-        toast('🛡️ Secure Core initialized. Zero-Data-Retention Edge Mode active.');
+        toast('Secure workspace unlocked. Zero-Data-Retention Edge Mode active.');
         $('mic')?.focus();
-        resolve();
+        resolveEdgeConsent?.();
       });
     });
 
+    openConsentModal();
     return edgeConsentPromise;
   }
 
@@ -165,7 +221,7 @@
     const hasKey = Boolean(getGeminiSessionKey());
     const manageBtn = $('apiKeyManageBtn');
     const hdrBtn = $('apiKeySettingsBtn');
-    if (manageBtn) manageBtn.textContent = hasKey ? '🔑 Gemini Live' : '🔑 API Key (Sim)';
+    if (manageBtn) manageBtn.textContent = hasKey ? 'API Key (Live)' : 'API Key (Sim)';
     if (hdrBtn) hdrBtn.classList.toggle('flagged', hasKey);
   }
 
@@ -1139,6 +1195,7 @@
   /* ---------- Tabs ---------- */
   const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
   function activateTab(tab) {
+    killAllAudio();
     tabs.forEach((btn) => {
       const on = btn === tab;
       btn.setAttribute('aria-selected', String(on));
@@ -1914,9 +1971,11 @@
   });
   $('clearCases').addEventListener('click', () => { caseStore.clear(); renderCases(); $('agentLog').replaceChildren(); });
 
+  $('soundBtn').setAttribute('aria-pressed', String(Sound.muted));
   $('soundBtn').addEventListener('click', () => {
     const muted = Sound.toggle();
-    $('soundBtn').textContent = muted ? '🔇' : '🔊';
+    $('soundBtn').setAttribute('aria-pressed', String(muted));
+    if (muted) killAllAudio();
   });
   $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
   $('closeHelp').addEventListener('click', () => $('helpDialog').close());

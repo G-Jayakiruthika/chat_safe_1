@@ -60,6 +60,7 @@
 .step p, .feature p, .story p { color: var(--muted); margin: 0; }
 
 .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; width: 100%; }
+.feature .feature-ico { color: var(--accent); margin-bottom: .35rem; display: block; }
 .feature span { font-size: 1.8rem; }
 .feature { transition: transform .3s, border-color .3s; }
 .feature:hover { transform: translateY(-4px); border-color: var(--accent); }

@@ -75,13 +75,23 @@
       ctx.stroke();
     }
 
-    // Center visual glyph per category
-    const cat = String(reel.category || '').toLowerCase();
-    const glyph = cat.includes('electric') ? '⚡' : cat.includes('arrest') ? '⚖️' : cat.includes('voice') ? '🎙️' : cat.includes('civic') ? '🚰' : '🛡️';
-    ctx.font = '54px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(glyph, W / 2, H * 0.32);
+    // Center geometric vector emblem per category (no emoji glyphs)
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(W / 2, H * 0.22);
+    ctx.lineTo(W / 2 + 24, H * 0.27);
+    ctx.lineTo(W / 2 + 20, H * 0.37);
+    ctx.lineTo(W / 2, H * 0.43);
+    ctx.lineTo(W / 2 - 20, H * 0.37);
+    ctx.lineTo(W / 2 - 24, H * 0.27);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 8, H * 0.33);
+    ctx.lineTo(W / 2 - 2, H * 0.38);
+    ctx.lineTo(W / 2 + 10, H * 0.29);
+    ctx.stroke();
 
     const scenes = reel.scenes || [{ badge: reel.category, headline: reel.title, body: reel.summary || '' }];
     const idx = Math.min(scenes.length - 1, Math.floor(progress * scenes.length));
@@ -124,8 +134,25 @@
     wrapText(ctx, sc.body || reel.summary || '', 32, H * 0.82, W - 64, 18, 2);
   }
 
+  const ICON_PLAY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l14 8-14 8V4z"/></svg>';
+  const ICON_PAUSE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+  const ICON_SHIELD = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  const ICON_CHECK = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+  const activePauseHandlers = new Set();
+
+  function stopAll() {
+    for (const pauseFn of [...activePauseHandlers]) {
+      try { pauseFn(); } catch { /* ignore */ }
+    }
+    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+    window.ChatSafeSound?.stopAll?.();
+  }
+
   function renderReelsFeed(container, baseReels, { onSpeak } = {}) {
     if (!container) return;
+    stopAll();
+    activePauseHandlers.clear();
     const all = [...loadUserReels(), ...baseReels];
     container.replaceChildren();
 
@@ -158,14 +185,28 @@
         playBtn.type = 'button';
         playBtn.className = 'reel-play-orb';
         playBtn.setAttribute('aria-label', `Play or pause ${reel.title}`);
-        playBtn.textContent = '▶';
+        playBtn.innerHTML = ICON_PLAY;
+
+        const forcePause = () => {
+          if (!video.paused) video.pause();
+          video.muted = true;
+          playBtn.innerHTML = ICON_PLAY;
+          playBtn.classList.remove('playing');
+          playBtn.setAttribute('aria-pressed', 'false');
+        };
+        activePauseHandlers.add(forcePause);
+
         playBtn.addEventListener('click', () => {
           if (video.paused) {
+            stopAll();
+            video.muted = false;
             video.play().catch(() => {});
-            playBtn.textContent = '⏸';
+            playBtn.innerHTML = ICON_PAUSE;
+            playBtn.classList.add('playing');
+            playBtn.setAttribute('aria-pressed', 'true');
           } else {
-            video.pause();
-            playBtn.textContent = '▶';
+            forcePause();
+            stopAll();
           }
         });
         media.appendChild(playBtn);
@@ -182,7 +223,7 @@
         playBtn.type = 'button';
         playBtn.className = 'reel-play-orb';
         playBtn.setAttribute('aria-label', `Play or pause ${reel.title}`);
-        playBtn.textContent = '▶';
+        playBtn.innerHTML = ICON_PLAY;
 
         const step = (now) => {
           const dt = Math.min(0.05, (now - last) / 1000);
@@ -194,20 +235,30 @@
           }
         };
 
+        const forcePause = () => {
+          playing = false;
+          cancelAnimationFrame(raf);
+          playBtn.innerHTML = ICON_PLAY;
+          playBtn.classList.remove('playing');
+          playBtn.setAttribute('aria-pressed', 'false');
+          drawReelVisual(cv, reel, progress, false, performance.now());
+        };
+        activePauseHandlers.add(forcePause);
+
         playBtn.addEventListener('click', () => {
-          playing = !playing;
-          playBtn.textContent = playing ? '⏸' : '▶';
-          playBtn.classList.toggle('playing', playing);
-          if (playing) {
+          const next = !playing;
+          stopAll();
+          if (next) {
+            playing = true;
+            playBtn.innerHTML = ICON_PAUSE;
+            playBtn.classList.add('playing');
+            playBtn.setAttribute('aria-pressed', 'true');
             last = performance.now();
             raf = requestAnimationFrame(step);
             if (onSpeak) {
               const script = (reel.scenes || []).map((s) => `${s.headline}. ${s.body}`).join(' ');
               onSpeak(script || reel.summary || reel.title);
             }
-          } else {
-            cancelAnimationFrame(raf);
-            drawReelVisual(cv, reel, progress, false, performance.now());
           }
         });
 
@@ -215,10 +266,10 @@
         media.appendChild(playBtn);
       }
 
-      // Top-left category shield pill + Top-right duration pill (matching screenshot)
+      // Top-left category shield pill + Top-right duration pill
       const catBadge = document.createElement('span');
       catBadge.className = 'reel-badge-cat';
-      catBadge.textContent = `🛡️ ${reel.category}`;
+      catBadge.innerHTML = `${ICON_SHIELD} <span>${escapeHtml(reel.category)}</span>`;
       const durBadge = document.createElement('span');
       durBadge.className = 'reel-badge-dur';
       durBadge.textContent = reel.duration || '0:45';
@@ -230,7 +281,7 @@
         <h4>${escapeHtml(reel.title)}</h4>
         <p class="small muted">${escapeHtml(reel.summary || '')}</p>
         <div class="reel-card-foot">
-          <span class="reel-verified">✓ ${escapeHtml(reel.creator)}</span>
+          <span class="reel-verified">${ICON_CHECK} ${escapeHtml(reel.creator)}</span>
           <span class="small muted">${escapeHtml(reel.views || 'New')}</span>
         </div>
       `;
@@ -239,6 +290,9 @@
       container.appendChild(card);
     });
   }
+
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopAll(); });
+  window.addEventListener('pagehide', stopAll);
 
   function addUserReel(reel) {
     const list = loadUserReels();
@@ -251,5 +305,5 @@
     return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  window.ChatSafeReels = { renderReelsFeed, addUserReel, loadUserReels };
+  window.ChatSafeReels = { renderReelsFeed, addUserReel, loadUserReels, stopAll };
 })();
