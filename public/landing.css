@@ -219,26 +219,25 @@
 /* Top landing header — cleanly aligned, Launch CTA anchored to the far right */
 .landing-top {
   display: flex; justify-content: space-between; align-items: center; width: 100%;
-  gap: clamp(.5rem, 1.4vw, 1rem); flex-wrap: wrap;
+  gap: clamp(.45rem, 1.2vw, 1rem); flex-wrap: nowrap;
 }
-.landing-top .mainnav { flex: 1 1 auto; justify-content: center; gap: .2rem; min-width: 0; }
-.landing-top .mainnav a { font-size: clamp(.72rem, 1vw, .82rem); padding: .4rem .62rem; letter-spacing: .04em; }
-.landing-top .controls {
+.landing-top .mainnav { flex: 0 1 auto; justify-content: center; gap: clamp(.12rem, .5vw, .35rem); min-width: 0; flex-wrap: nowrap; }
+.landing-top .mainnav a { font-size: clamp(.72rem, .92vw, .82rem); padding: .38rem clamp(.48rem, .7vw, .7rem); letter-spacing: .04em; white-space: nowrap; }
+.landing-top .controls,
+.landing-top .header-actions {
   flex: 0 0 auto; margin-left: auto; display: flex; flex-wrap: nowrap;
-  align-items: center; justify-content: flex-end; gap: .45rem;
+  align-items: center; justify-content: flex-end; gap: .45rem; min-width: 0;
 }
 .landing-top .nav-launch-btn { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
 
 @media (min-width: 1025px) {
   .landing main { max-width: 1440px; }
+  .landing-top { flex-wrap: nowrap; }
   .landing-top .controls { margin-left: auto; }
 }
 
-@media (min-width: 1240px) {
-  .landing-top { flex-wrap: nowrap; }
-}
-
-@media (max-width: 1239px) {
+@media (max-width: 1024px) {
+  .landing-top { flex-wrap: wrap; }
   .landing-top .mainnav { order: 3; width: 100%; justify-content: flex-start; overflow-x: auto; padding-bottom: .25rem; }
 }
 
@@ -248,11 +247,12 @@
 }
 
 @media (max-width: 767px) {
-  .landing-top { padding: .6rem 1rem; gap: .5rem; justify-content: space-between; width: 100%; }
-  .landing-top .controls { display: flex; flex-wrap: wrap; width: 100%; max-width: 100%; align-items: center; justify-content: space-between; margin-left: auto; gap: .4rem; }
+  .landing-top { padding: .6rem 1rem; gap: .5rem; justify-content: space-between; width: 100%; flex-wrap: wrap; }
+  .landing-top .controls,
+  .landing-top .header-actions { display: flex; flex-wrap: nowrap; width: auto; align-items: center; justify-content: flex-end; margin-left: auto; gap: .4rem; }
   .landing-top .controls .icon-btn,
-  .landing-top .nav-launch-btn { min-width: 48px; min-height: 48px; }
-  .landing-top .nav-launch-btn { margin-left: auto; padding: .55rem .95rem; font-size: .88rem; }
+  .landing-top .nav-launch-btn { min-width: 44px; min-height: 44px; }
+  .landing-top .nav-launch-btn { margin-left: auto; padding: .48rem .9rem; font-size: .86rem; }
   .ticker { margin-inline: 0; width: 100%; }
   .stage { min-height: auto; padding: 2.25rem 0 1.75rem; }
   .hero-split, .feature-grid, .steps, .stats { grid-template-columns: 1fr; }
