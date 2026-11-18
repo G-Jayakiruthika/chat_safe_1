@@ -160,10 +160,16 @@
         <div class="panel-head">
           <h1 id="agentTitle" data-i18n="agentTitle">Kavach &amp; Urimai — Scam Shield &amp; Civic Petitions</h1>
           <div class="head-actions">
+            <button type="button" id="demoBtn" class="chip demo-chip auto-demo-btn" aria-label="Start Auto-Pilot Guided Demo" data-tip="One-click Auto-Pilot Guided Demo: Kavach Red Scam + Urimai Blue Civic + PDF">▶ Start Auto-Demo</button>
             <button type="button" id="apiKeyManageBtn" class="chip" data-tip="View, update, or clear your Gemini API Key">API Key</button>
             <button type="button" id="newChat" class="chip" data-i18n="newChat">+ New chat</button>
-            <button type="button" id="demoBtn" class="chip demo-chip" data-i18n="demo">Guided demo</button>
           </div>
+        </div>
+        <div class="sim-mode-bar">
+          <button type="button" id="demoSimulatorBadge" class="sim-mode-pill" data-tip="Zero-Config AI Simulator active — click to optionally add a live Gemini API Key">
+            <span class="sim-dot" aria-hidden="true"></span>
+            <span id="demoSimulatorLabel">Demo Mode Active: Live AI Simulator</span>
+          </button>
         </div>
         <p class="muted" data-i18n="agentIntro">Speak, paste, or press Speed-Dial 9 on a button phone. Kavach stops cyber scams (1930) while Urimai generates automated local legal petitions—manage rural issues remotely from any smartphone or laptop.</p>
         <p id="uiNote" class="note" hidden></p>
