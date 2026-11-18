@@ -216,7 +216,10 @@
 
 
 /* Top landing header — cleanly aligned, Launch CTA anchored to the far right */
-.landing-top { display: flex; align-items: center; gap: clamp(.5rem, 1.4vw, 1rem); flex-wrap: wrap; }
+.landing-top {
+  display: flex; justify-content: space-between; align-items: center; width: 100%;
+  gap: clamp(.5rem, 1.4vw, 1rem); flex-wrap: wrap;
+}
 .landing-top .mainnav { flex: 1 1 auto; justify-content: center; gap: .2rem; min-width: 0; }
 .landing-top .mainnav a { font-size: clamp(.72rem, 1vw, .82rem); padding: .4rem .62rem; letter-spacing: .04em; }
 .landing-top .controls {
@@ -244,11 +247,11 @@
 }
 
 @media (max-width: 767px) {
-  .landing-top { padding: .6rem 1rem; gap: .5rem; }
-  .landing-top .controls { flex-wrap: wrap; max-width: 100%; justify-content: flex-end; gap: .4rem; }
+  .landing-top { padding: .6rem 1rem; gap: .5rem; justify-content: space-between; width: 100%; }
+  .landing-top .controls { display: flex; flex-wrap: wrap; width: 100%; max-width: 100%; align-items: center; justify-content: space-between; margin-left: auto; gap: .4rem; }
   .landing-top .controls .icon-btn,
   .landing-top .nav-launch-btn { min-width: 48px; min-height: 48px; }
-  .landing-top .nav-launch-btn { padding: .55rem .95rem; font-size: .88rem; }
+  .landing-top .nav-launch-btn { margin-left: auto; padding: .55rem .95rem; font-size: .88rem; }
   .ticker { margin-inline: 0; width: 100%; }
   .stage { min-height: auto; padding: 2.25rem 0 1.75rem; }
   .hero-split, .feature-grid, .steps, .stats { grid-template-columns: 1fr; }

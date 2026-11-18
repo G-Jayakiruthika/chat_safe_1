@@ -1,0 +1,27 @@
+name: Static PWA & HTML Integrity Check
+
+on:
+  push:
+    branches: [main, gh-pages]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  static-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify static HTML, CSS, JS, and PWA manifest files
+        run: |
+          set -euo pipefail
+          for f in public/index.html public/app.html public/demo.html public/connect.html public/account.html public/privacy.html public/proxy.html; do
+            test -s "$f" || { echo "Missing or empty HTML file: $f"; exit 1; }
+            grep -qi "<!DOCTYPE html>" "$f" || { echo "Missing DOCTYPE in $f"; exit 1; }
+            grep -qi "<title>" "$f" || { echo "Missing <title> in $f"; exit 1; }
+          done
+          for asset in public/styles.css public/landing.css public/palettes.css public/app.js public/core.js public/manifest.webmanifest public/sw.js; do
+            test -s "$asset" || { echo "Missing or empty asset: $asset"; exit 1; }
+          done
+          echo "All static HTML, CSS, JS, and PWA assets verified."
