@@ -9,6 +9,8 @@ node_modules/
 *.sqlite*
 
 # Build / logs
+dist/
+build/
 coverage/
 *.log
 .DS_Store

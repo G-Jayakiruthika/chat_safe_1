@@ -41,9 +41,10 @@
 body.big { --scale: 1.25; }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; max-width: 100%; overflow-x: clip; }
 body {
   margin: 0;
+  max-width: 100%;
   overflow-x: clip;
   min-height: 100vh;
   font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans", "Noto Sans Tamil", "Noto Sans Devanagari",
@@ -79,11 +80,11 @@ body {
 }
 .logo span { color: var(--focus); -webkit-text-fill-color: var(--focus); }
 .tagline { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.25; }
-.controls { display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.controls { display: flex; gap: .45rem; flex-wrap: wrap; align-items: center; justify-content: flex-end; margin-left: auto; }
 .controls .icon-btn { width: 40px; height: 40px; min-height: 40px; font-size: 1.05rem; }
 
 /* ---------- Layout ---------- */
-main { max-width: 1160px; margin: 0 auto; padding: 1.5rem clamp(1rem, 3.5vw, 2.25rem) 3rem; }
+main { width: 100%; max-width: 1440px; margin: 0 auto; padding: clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 3.5vw, 2.5rem) clamp(2rem, 5vh, 3.25rem); }
 .glass {
   background: var(--glass); backdrop-filter: blur(12px); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow);
@@ -937,3 +938,354 @@ body.notes-off #sf-tip { display: none !important; }
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem;
 }
 .cookie-banner p { margin: 0; font-size: .88rem; flex: 1; min-width: 240px; }
+
+/* ============================================================================
+   Zero-Data-Retention & Edge Privacy Consent Modal (Non-Dismissible Security Gate)
+   ============================================================================ */
+body.consent-locked {
+  overflow: hidden;
+  height: 100vh;
+}
+body.consent-locked > header,
+body.consent-locked > main,
+body.consent-locked > footer {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.consent-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: clamp(.75rem, 3vw, 1.5rem);
+  background: rgb(5 10 22 / .78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.consent-modal-backdrop[hidden] { display: none !important; }
+
+.consent-modal-card {
+  width: min(560px, 100%);
+  max-height: 92dvh;
+  overflow-y: auto;
+  padding: clamp(1.25rem, 3.5vw, 2rem);
+  border-radius: 22px;
+  background: var(--glass);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  box-shadow: 0 28px 80px rgb(0 0 0 / .6);
+  display: grid;
+  gap: .95rem;
+  animation: rise .35s ease both;
+}
+.consent-modal-card.consent-shake {
+  animation: consent-shake .36s ease;
+}
+@keyframes consent-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+.consent-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  justify-self: start;
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font: 800 .72rem/1.2 ui-monospace, "Cascadia Code", Consolas, monospace;
+  letter-spacing: .1em;
+}
+.consent-modal-card h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 2.8vw, 1.65rem);
+  line-height: 1.2;
+}
+.consent-modal-body {
+  display: grid;
+  gap: .65rem;
+  font-size: clamp(.92rem, 1.5vw, 1rem);
+  line-height: 1.58;
+  color: var(--ink);
+}
+.consent-modal-body p { margin: 0; }
+.consent-modal-pillars {
+  list-style: none;
+  margin: 0;
+  padding: .75rem .9rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg2) 72%, transparent);
+  display: grid;
+  gap: .4rem;
+  font-size: .86rem;
+  color: var(--muted);
+}
+.consent-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: .25rem;
+}
+.consent-agree-btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1rem;
+  letter-spacing: .01em;
+}
+
+/* ============================================================================
+   Shared Fluid Grid Helpers & Overflow Prevention
+   ============================================================================ */
+.chat-column { display: grid; gap: .55rem; min-width: 0; }
+.pub-meta-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.sig-table-wrap { width: 100%; overflow-x: auto; max-width: 100%; }
+.panel, .hero, .agent-panel, .urimai-card, .result, .bilingual-box, .google-card, .kit-step { min-width: 0; max-width: 100%; }
+
+/* ============================================================================
+   Universal Responsive Fluid Layout Engine
+   1. Laptops / macOS / Large Desktops (> 1024px)
+   2. Tablets / iPads (768px - 1024px)
+   3. Mobile / Android / iOS (< 768px)
+   ============================================================================ */
+
+/* 1. Laptops / macOS / Desktops (> 1024px) */
+@media (min-width: 1025px) {
+  main,
+  .cookie-banner {
+    max-width: 1440px;
+  }
+  main {
+    margin-inline: auto;
+    padding-inline: clamp(1.5rem, 3.5vw, 3rem);
+  }
+  .glass.panel,
+  .hero.glass {
+    width: 100%;
+    max-width: 1440px;
+    margin-inline: auto;
+  }
+  .top .controls {
+    margin-left: auto;
+    flex-wrap: nowrap;
+  }
+  .hero {
+    grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+    gap: clamp(1.25rem, 2.5vw, 2rem);
+  }
+  .voice-dual {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .bilingual-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .iso-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .top {
+    flex-wrap: nowrap;
+  }
+}
+
+/* 2. Tablets / iPads (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  main {
+    padding: clamp(1rem, 2.5vw, 1.5rem) clamp(1rem, 3vw, 1.75rem) 2.5rem;
+  }
+  .top .controls {
+    margin-left: auto;
+  }
+  .mainnav {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: .2rem;
+  }
+  .hero {
+    grid-template-columns: minmax(220px, 290px) minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+  .voice-dual {
+    grid-template-columns: minmax(0, 1fr) minmax(215px, 240px);
+    gap: 1rem;
+  }
+  .bus-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .45rem .65rem;
+    align-items: center;
+  }
+  .bus-strip .bus-label {
+    grid-column: 1 / -1;
+  }
+  .bus-node {
+    text-align: center;
+  }
+  .bilingual-grid,
+  .kit-grid,
+  .google-grid,
+  .agent-grid,
+  .type-grid,
+  .reels-grid-3,
+  .iso-grid,
+  .channel-grid,
+  .setup-grid,
+  .pub-meta-grid,
+  .demo-sticky-grid,
+  .auto-switches {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tabs-primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tabs-tools {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 3. Mobile / Android / iOS (< 768px) */
+@media (max-width: 767px) {
+  html, body {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  main {
+    padding: .85rem clamp(.75rem, 3.5vw, 1rem) 2.25rem;
+    max-width: 100%;
+  }
+  .top {
+    padding: .65rem .85rem;
+    gap: .55rem;
+  }
+  .tagline {
+    font-size: .74rem;
+  }
+  .mainnav {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: .25rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mainnav a {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    padding: .45rem .8rem;
+  }
+  .controls {
+    width: 100%;
+    justify-content: flex-end;
+    gap: .45rem;
+  }
+
+  /* Guarantee at least 48x48px touch targets on mobile */
+  button,
+  .button,
+  .icon-btn,
+  .controls .icon-btn,
+  .tabs [role="tab"],
+  .chip,
+  .region-pill,
+  .feed-tab,
+  .keypad-key,
+  .consent-agree-btn,
+  .case-open,
+  .case-del,
+  .button.sm,
+  button.sm {
+    min-width: 48px;
+    min-height: 48px;
+  }
+  input,
+  textarea,
+  select {
+    min-height: 48px;
+    font-size: 16px;
+    max-width: 100%;
+  }
+
+  /* Single-column stacking for chat, scanner, and dashboard panels */
+  .hero,
+  .voice-dual,
+  .bilingual-grid,
+  .kit-grid,
+  .google-grid,
+  .agent-grid,
+  .type-grid,
+  .reels-grid-3,
+  .iso-grid,
+  .channel-grid,
+  .setup-grid,
+  .pub-meta-grid,
+  .auto-switches,
+  .demo-sticky-grid,
+  .tabs-primary,
+  .tabs-tools,
+  .g-choices {
+    grid-template-columns: 1fr;
+  }
+  .bus-strip {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: .4rem;
+  }
+  .avatar {
+    width: min(230px, 64vw);
+  }
+  .chat {
+    max-height: 46vh;
+  }
+  .chat li {
+    max-width: 96%;
+  }
+
+  /* Thumb-friendly vertical input forms & action buttons */
+  .ask {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ask button[type="submit"],
+  .actions button,
+  .actions .button,
+  .head-actions button,
+  .keypad-scenarios .chip {
+    width: 100%;
+  }
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .keypad-phone {
+    width: min(290px, 100%);
+  }
+  .keypad-key {
+    min-height: 48px;
+  }
+  .cookie-banner {
+    left: .65rem;
+    right: .65rem;
+    bottom: .65rem;
+    padding: .85rem;
+  }
+  .cookie-banner p {
+    min-width: 0;
+  }
+  .set-panel {
+    right: .5rem;
+    left: .5rem;
+    width: auto;
+    max-width: calc(100vw - 1rem);
+  }
+}

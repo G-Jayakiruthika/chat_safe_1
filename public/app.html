@@ -14,9 +14,45 @@
   <link rel="stylesheet" href="palettes.css">
   <script src="theme.js"></script>
 </head>
-<body data-default-palette="mandarin">
+<body data-default-palette="mandarin" class="consent-locked">
   <canvas id="bg" class="bg" aria-hidden="true"></canvas>
   <a class="skip" href="#main">Skip to main content</a>
+
+  <!-- Persistent Non-Dismissible Zero-Data-Retention & Edge Privacy Modal -->
+  <div id="edgeConsentModal" class="consent-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edgeConsentTitle" aria-describedby="edgeConsentDesc">
+    <div class="consent-modal-card glass">
+      <div class="consent-modal-badge">
+        <span aria-hidden="true">🛡️</span>
+        <span>ZERO-DATA-RETENTION SECURITY LAYER</span>
+      </div>
+      <h2 id="edgeConsentTitle">Zero-Data-Retention &amp; Edge Privacy Notice</h2>
+      <div id="edgeConsentDesc" class="consent-modal-body">
+        <p>Chat_Safe processes all audio and text prompts locally on your device or via volatile session storage (sessionStorage). No personal data, PII, or voice inputs are logged on external servers.</p>
+        <p>Chat_Safe operates on a Zero-Data-Retention, Client-Side Edge architecture. Your voice prompts, chats, and files remain strictly on your device or in volatile session memory. No private data is logged on external servers.</p>
+      </div>
+      <ul class="consent-modal-pillars" aria-label="Security guarantees">
+        <li>🔒 Local-first &amp; volatile <code>sessionStorage</code> execution</li>
+        <li>🎙️ Zero external logging of voice prompts, chats, or files</li>
+        <li>🧪 Automatic PII masking with <code>[REDACTED]</code> tags</li>
+      </ul>
+      <div class="consent-modal-actions">
+        <button type="button" id="edgeConsentAgreeBtn" class="primary consent-agree-btn">I Agree &amp; Initialize Secure Core</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (() => {
+      try {
+        if (sessionStorage.getItem('chatsafe.edgeConsentAccepted') === '1') {
+          const modal = document.getElementById('edgeConsentModal');
+          if (modal) modal.hidden = true;
+          document.body.classList.remove('consent-locked');
+          return;
+        }
+      } catch { /* ignore storage restrictions */ }
+      document.body.classList.add('consent-locked');
+    })();
+  </script>
 
   <header class="top">
     <a class="brand" href="index.html" aria-label="Chat_Safe home">
@@ -91,7 +127,7 @@
         <p id="uiNote" class="note" hidden></p>
 
         <div class="voice-dual">
-          <div style="display:grid;gap:.55rem;min-width:0">
+          <div class="chat-column">
             <ol id="agentLog" class="chat" aria-live="polite" aria-label="Conversation with Kavach & Urimai"></ol>
             <div class="quick" role="group" aria-label="Quick voice prompts">
               <button type="button" class="chip" data-ask="chipReal" data-i18n="chipReal">Is this caller really from my bank?</button>
@@ -135,7 +171,7 @@
 
         <!-- Live Multi-Agent Bus Strip -->
         <div class="bus-strip" id="agentBus" aria-label="Live AI Agent Bus">
-          <span class="mono small muted">AGENT BUS:</span>
+          <span class="mono small muted bus-label">AGENT BUS:</span>
           <span class="bus-node active" data-bus="vani">📞 Vani IVR</span>
           <span class="bus-node" data-bus="gemini">✨ Gemini Router</span>
           <span class="bus-node" data-bus="kavach">🛡️ Kavach</span>
@@ -207,7 +243,7 @@
           <label class="small"><input type="checkbox" id="pubVerified" checked> Verified Badge ✓</label>
         </div>
         <input id="pubTitle" type="text" placeholder="Video headline (e.g., Fake courier call alert in RS Puram)" required>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem">
+        <div class="pub-meta-grid">
           <input id="pubCreator" type="text" placeholder="Your verified handle" value="Cyber Mitra Verified" required>
           <input id="pubCategory" type="text" placeholder="Category" value="Electricity Scam" required>
           <select id="pubCity" aria-label="City for video">
@@ -478,16 +514,18 @@
         <!-- 5-Signature Block Preview -->
         <details>
           <summary style="cursor:pointer;font-weight:700">Preview: Signatures of Affected Residents Table (included in PDF)</summary>
-          <table class="sig-table" style="margin-top:.6rem">
-            <thead><tr><th>#</th><th>Resident Name</th><th>Door No. / Street</th><th>Signature / Thumbprint</th></tr></thead>
-            <tbody>
-              <tr><td>1</td><td></td><td></td><td></td></tr>
-              <tr><td>2</td><td></td><td></td><td></td></tr>
-              <tr><td>3</td><td></td><td></td><td></td></tr>
-              <tr><td>4</td><td></td><td></td><td></td></tr>
-              <tr><td>5</td><td></td><td></td><td></td></tr>
-            </tbody>
-          </table>
+          <div class="sig-table-wrap">
+            <table class="sig-table" style="margin-top:.6rem">
+              <thead><tr><th>#</th><th>Resident Name</th><th>Door No. / Street</th><th>Signature / Thumbprint</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td></td><td></td><td></td></tr>
+                <tr><td>2</td><td></td><td></td><td></td></tr>
+                <tr><td>3</td><td></td><td></td><td></td></tr>
+                <tr><td>4</td><td></td><td></td><td></td></tr>
+                <tr><td>5</td><td></td><td></td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
         </details>
       </div>
     </section>

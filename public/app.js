@@ -55,6 +55,86 @@
   }
 
   /* =========================================================================
+   * ZERO-DATA-RETENTION & EDGE PRIVACY CONSENT GATE (NON-DISMISSIBLE)
+   * ========================================================================= */
+  const CONSENT_STORAGE_KEY = 'chatsafe.edgeConsentAccepted';
+  function hasEdgeConsent() {
+    try { return sessionStorage.getItem(CONSENT_STORAGE_KEY) === '1'; } catch { return false; }
+  }
+
+  function setAppRegionsLocked(locked) {
+    document.body.classList.toggle('consent-locked', locked);
+    document.querySelectorAll('body > header, body > main, body > footer').forEach((el) => {
+      if (locked) {
+        el.setAttribute('inert', '');
+        el.setAttribute('aria-hidden', 'true');
+      } else {
+        el.removeAttribute('inert');
+        el.removeAttribute('aria-hidden');
+      }
+    });
+  }
+
+  let edgeConsentPromise = null;
+  function initEdgeConsentGate() {
+    const modal = $('edgeConsentModal');
+    const agreeBtn = $('edgeConsentAgreeBtn');
+    if (!modal || !agreeBtn) return Promise.resolve();
+
+    if (hasEdgeConsent()) {
+      modal.hidden = true;
+      setAppRegionsLocked(false);
+      return Promise.resolve();
+    }
+
+    if (edgeConsentPromise) return edgeConsentPromise;
+
+    modal.hidden = false;
+    setAppRegionsLocked(true);
+    agreeBtn.focus();
+
+    edgeConsentPromise = new Promise((resolve) => {
+      const preventDismiss = (e) => {
+        if (modal.hidden) return;
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          agreeBtn.focus();
+        }
+      };
+      document.addEventListener('keydown', preventDismiss, true);
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          const card = modal.querySelector('.consent-modal-card');
+          card?.classList.remove('consent-shake');
+          void card?.offsetWidth;
+          card?.classList.add('consent-shake');
+          agreeBtn.focus();
+        }
+      });
+
+      agreeBtn.addEventListener('click', () => {
+        try {
+          sessionStorage.setItem(CONSENT_STORAGE_KEY, '1');
+          sessionStorage.setItem('chatsafe.edgeConsentAt', new Date().toISOString());
+        } catch { /* ignore storage restrictions */ }
+        document.removeEventListener('keydown', preventDismiss, true);
+        modal.hidden = true;
+        setAppRegionsLocked(false);
+        Sound.play('safe');
+        toast('🛡️ Secure Core initialized. Zero-Data-Retention Edge Mode active.');
+        $('mic')?.focus();
+        resolve();
+      });
+    });
+
+    return edgeConsentPromise;
+  }
+
+  const edgeConsentReady = initEdgeConsentGate();
+
+  /* =========================================================================
    * PHASE 1: DUAL-MODE SECURITY & BYOK INITIALIZATION (Cloud Run + Edge BYOK)
    * ========================================================================= */
   function getSessionKey(name) {
@@ -1705,19 +1785,21 @@
     renderScanHistory();
     renderHud();
 
-    // Handle prefill / share_target / ?try= from demo.html or landing page
+    // Handle prefill / share_target / ?try= from demo.html or landing page after consent
     syncCookieBanner();
     if (location.hash === '#tab-privacy' && $('tab-privacy')) activateTab($('tab-privacy'));
     const q = new URLSearchParams(location.search);
     const prefill = q.get('prefill') || q.get('text');
     const tryId = q.get('try');
     if (prefill) {
+      await edgeConsentReady;
       $('message').value = prefill;
       activateTab($('tab-scanner'));
       runSmartScan(prefill);
     } else if (tryId && window.SCAM_TYPES) {
       const found = window.SCAM_TYPES.find((s) => s.id === tryId);
       if (found) {
+        await edgeConsentReady;
         $('message').value = found.sample || found.says;
         activateTab($('tab-scanner'));
         runSmartScan($('message').value);
