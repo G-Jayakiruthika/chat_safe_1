@@ -252,10 +252,11 @@
       overlay.setAttribute('aria-modal', 'true');
       overlay.setAttribute('aria-labelledby', 'byokModalTitle');
       Object.assign(overlay.style, {
-        position: 'fixed', inset: '0', zIndex: '9999',
+        position: 'fixed', inset: '0', zIndex: '10050',
         display: 'grid', placeItems: 'center', padding: '1rem',
         background: 'rgba(8, 15, 32, 0.72)',
         backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        pointerEvents: 'auto',
       });
 
       const currentGemini = getGeminiSessionKey();
@@ -597,16 +598,32 @@
     const ruleScore = Math.max(0, Math.min(100, Math.round(Number(base?.score) || 0)));
     const hasSafeOtpNotice = /\b(do\s+not|never|don'?t)\s+share\s+(this\s+|your\s+|the\s+)?(otp|pin|cvv)/i.test(clean)
       && !/\b(http|https|bit\.ly|tinyurl|t\.me|verify\s+now|blocked|suspended|arrest|cbi|transfer)\b/i.test(clean);
-    const highRiskRe = /\b(digital\s+arrest|arrest\s+warrant)\b|\b(cbi|ncb|enforcement\s+directorate|customs)\b.*\b(arrest|warrant|video\s*call|transfer|money|fine|drugs|parcel|freeze)\b|\b(fedex|courier|customs)\b.*\b(drugs|illegal|seized|narcotics|police|cbi)\b|(share|send|verify|update|enter|tell).{0,25}\b(otp|pin|cvv|kyc|aadhaar|pan)\b|\b(kyc|account|sim|card)\b.{0,25}\b(blocked|suspended|deactivated|expire|frozen)\b|\b(guaranteed\s+returns?|daily\s+profit|sebi\s+vip|vip\s+stock\s+tips?|won\s+(a\s+)?lottery|claim\s+(your\s+)?prize)\b/i;
-    const moderateRiskRe = /\b(urgent|verify\s+now|click\s+here|bit\.ly|tinyurl|t\.me|claim\s+now|act\s+now|free\s+gift|loan\s+approved)\b/i;
 
-    let score = ruleScore;
+    // Dynamic weighted token, URL pattern, and intent marker scoring (no static fixed scores)
+    const tokenSignals = [
+      { pts: 28, re: /\b(cbi|ncb|enforcement\s+directorate|\bed\b|police|customs|trai|income\s*tax|inspector)\b/i },
+      { pts: 28, re: /\b(digital\s+arrest|arrest(?:\s+warrant)?|warrant|summons|non[- ]?bailable|skype|stay\s+on\s+(?:video\s*)?call|do\s+not\s+tell\s+family)\b/i },
+      { pts: 22, re: /\b(fedex|courier|parcel|narcotics|drugs|seized|contraband)\b/i },
+      { pts: 30, re: /(share|send|verify|update|enter|tell).{0,25}\b(otp|pin|cvv|kyc|aadhaar|pan)\b/i },
+      { pts: 26, re: /\b(kyc|account|sim|card|pan|bank)\b.{0,25}\b(blocked|suspended|deactivated|expire|frozen)\b/i },
+      { pts: 22, re: /\b(transfer|deposit|send|pay)\b.{0,25}(?:₹|rs\.?|inr|\d{3,})|\b[a-z0-9._-]+@(?:ybl|okaxis|okicici|oksbi|paytm|upi|ibl)\b|\bifsc\b/i },
+      { pts: 26, re: /\b(guaranteed\s+returns?|daily\s+profit|sebi\s+vip|vip\s+stock\s+tips?|won\s+(?:a\s+)?lottery|claim\s+(?:your\s+)?prize)\b/i },
+      { pts: 26, re: /\b(bit\.ly|tinyurl\.com|t\.co|t\.me|rb\.gy|goo\.gl)\b|https?:\/\/\d{1,3}(?:\.\d{1,3}){3}|\.(?:tk|ml|ga|cf|gq|xyz|top|buzz)\b/i },
+      { pts: 28, re: /\b(urgent|immediate(?:ly)?|verify\s+now|act\s+now|last\s+warning|within\s+\d+\s+hours?)\b/i },
+      { pts: 18, re: /\b(click\s+here|claim\s+(?:now|your)|free\s+gift|loan\s+approved|bonus|reward)\b/i },
+    ];
+    let weightedTokens = 0;
+    for (const sig of tokenSignals) {
+      if (sig.re.test(clean)) weightedTokens += sig.pts;
+    }
+
+    let score;
     if (hasSafeOtpNotice) {
-      score = Math.min(ruleScore, 15);
-    } else if (highRiskRe.test(clean)) {
-      score = Math.max(ruleScore, 82);
-    } else if (moderateRiskRe.test(clean)) {
-      score = ruleScore >= 66 ? ruleScore : Math.max(ruleScore, 45);
+      score = Math.max(0, Math.min(18, Math.round(weightedTokens * 0.25)));
+    } else if (weightedTokens > 0) {
+      score = Math.max(ruleScore, Math.min(100, Math.round(weightedTokens + ruleScore * 0.35)));
+    } else {
+      score = ruleScore;
     }
 
     const tier = getThreatTier(score);
