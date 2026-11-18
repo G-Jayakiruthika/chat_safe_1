@@ -787,7 +787,7 @@
     </form>
   </div>
 
-  <aside id="cases" class="drawer" aria-labelledby="casesTitle" hidden>
+  <aside id="cases" class="drawer" role="dialog" aria-modal="true" aria-labelledby="casesTitle" hidden>
     <div class="marquee" aria-hidden="true"><span>CASE FILES · STORED ON THIS DEVICE ONLY · SEARCH ANY WORD ·&nbsp;</span><span>CASE FILES · STORED ON THIS DEVICE ONLY · SEARCH ANY WORD ·&nbsp;</span></div>
     <div class="drawer-head">
       <h2 id="casesTitle">Case files</h2>
@@ -805,7 +805,7 @@
     <p class="muted small">Saved only in this browser. Nothing is uploaded.</p>
   </aside>
 
-  <dialog id="helpDialog" aria-labelledby="helpTitle">
+  <dialog id="helpDialog" aria-modal="true" aria-labelledby="helpTitle">
     <h2 id="helpTitle">Keyboard shortcuts</h2>
     <dl class="keys">
       <dt><kbd>M</kbd></dt><dd>Start / stop the mic</dd>

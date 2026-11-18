@@ -59,9 +59,92 @@
   const caseStore = window.createHistory();
   const isDark = () => document.documentElement.dataset.theme !== 'light';
 
+  /**
+   * Updates the 3D Kavach avatar mood and ambient canvas background color.
+   *
+   * @param {'idle'|'safe'|'civic'|'suspicious'|'critical'} mood Visual mood token.
+   * @returns {void}
+   */
   function setMood(mood) {
     kavach.setMood(mood);
     bg.setColor(MOOD_RGB[mood] || MOOD_RGB.idle, isDark() ? 0.6 : 0.35);
+  }
+
+  /* =========================================================================
+   * MODAL ACCESSIBILITY: FOCUS TRAP & ESCAPE KEY GOVERNANCE
+   * ========================================================================= */
+  /**
+   * Collects all visible, keyboard-focusable elements inside a container.
+   *
+   * @param {HTMLElement} container Modal or dialog root element.
+   * @returns {HTMLElement[]} Ordered array of focusable elements.
+   */
+  function getFocusableElements(container) {
+    if (!container) return [];
+    const selector = [
+      'a[href]',
+      'button:not([disabled])',
+      'input:not([disabled]):not([type="hidden"])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(', ');
+    return [...container.querySelectorAll(selector)].filter((el) => {
+      if (el.closest('[hidden]')) return false;
+      const style = window.getComputedStyle(el);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    });
+  }
+
+  /**
+   * Traps Tab/Shift+Tab focus inside an active modal container and handles Escape dismissal.
+   *
+   * @param {HTMLElement} modalEl Active modal element (`role="dialog"`).
+   * @param {Object} [options] Configuration options.
+   * @param {() => void} [options.onEscape] Callback invoked when Escape is pressed.
+   * @param {HTMLElement|null} [options.restoreFocusTo] Element to focus when released.
+   * @returns {() => void} Cleanup function that detaches listeners and optionally restores focus.
+   */
+  function trapModalFocus(modalEl, { onEscape, restoreFocusTo } = {}) {
+    const previousFocus = restoreFocusTo !== undefined
+      ? restoreFocusTo
+      : (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+
+    const onKeyDown = (e) => {
+      if (!modalEl || modalEl.hidden) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        onEscape?.();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const focusables = getFocusableElements(modalEl);
+      if (!focusables.length) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first || !modalEl.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !modalEl.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown, true);
+    return (skipRestore = false) => {
+      document.removeEventListener('keydown', onKeyDown, true);
+      if (!skipRestore && previousFocus && document.contains(previousFocus)) {
+        try { previousFocus.focus({ preventScroll: true }); } catch { /* ignore */ }
+      }
+    };
   }
 
   /* =========================================================================
@@ -70,6 +153,11 @@
   const CONSENT_STORAGE_KEY = 'chatsafe.edgeConsentAccepted';
   const CONSENT_TS_KEY = 'chatsafe.consentAcceptedAt';
 
+  /**
+   * Checks whether the user has already accepted the Edge Privacy Governance policy.
+   *
+   * @returns {boolean} True when consent timestamp or session flag is stored.
+   */
   function hasEdgeConsent() {
     try {
       return Boolean(localStorage.getItem(CONSENT_TS_KEY)) || sessionStorage.getItem(CONSENT_STORAGE_KEY) === '1';
@@ -78,6 +166,13 @@
     }
   }
 
+  /**
+   * Toggles `inert` and `aria-hidden` across background landmarks while a modal gate is active.
+   *
+   * @param {boolean} locked Whether background regions should be locked.
+   * @param {boolean} [mainOnly=false] When true, locks only `<main>` and leaves header/footer active.
+   * @returns {void}
+   */
   function setAppRegionsLocked(locked, mainOnly = false) {
     document.body.classList.toggle('consent-locked', locked && !mainOnly);
     const mainEl = $('main');
@@ -100,8 +195,15 @@
     });
   }
 
+  /**
+   * Halts all active speech synthesis, Web Audio effects, and media playback.
+   *
+   * @returns {void}
+   */
   function killAllAudio() {
-    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+    try { window.speechSynthesis?.cancel(); } catch (err) {
+      console.warn('[Chat_Safe][SpeechSynthesis] Cancel failed:', err?.message || err);
+    }
     try { Sound.stopAll?.(); } catch { /* ignore */ }
     try { window.ChatSafeReels?.stopAll?.(); } catch { /* ignore */ }
     try { window.ChatSafeExplainerStop?.(); } catch { /* ignore */ }
@@ -117,6 +219,13 @@
 
   let edgeConsentPromise = null;
   let resolveEdgeConsent = null;
+
+  /**
+   * Initializes the GDPR/ISO Zero-Data-Retention consent modal gate with trapped keyboard focus,
+   * Escape-to-decline handling, and region locking until accepted.
+   *
+   * @returns {Promise<void>} Resolves once the user accepts the Edge Privacy Governance policy.
+   */
   function initEdgeConsentGate() {
     const modal = $('edgeConsentModal');
     const agreeBtn = $('edgeConsentAgreeBtn');
@@ -134,10 +243,27 @@
 
     if (edgeConsentPromise) return edgeConsentPromise;
 
+    let releaseConsentTrap = null;
+    const declineConsent = () => {
+      killAllAudio();
+      try { sessionStorage.setItem('chatsafe.edgeConsentDeclined', '1'); } catch { /* ignore */ }
+      releaseConsentTrap?.(true);
+      releaseConsentTrap = null;
+      modal.hidden = true;
+      setAppRegionsLocked(true, true);
+      if (declinedBanner) declinedBanner.hidden = false;
+      reopenBtn?.focus();
+    };
+
     const openConsentModal = () => {
       modal.hidden = false;
       if (declinedBanner) declinedBanner.hidden = true;
       setAppRegionsLocked(true, false);
+      releaseConsentTrap?.(true);
+      releaseConsentTrap = trapModalFocus(modal, {
+        onEscape: declineConsent,
+        restoreFocusTo: reopenBtn || null,
+      });
       agreeBtn.focus();
     };
 
@@ -145,15 +271,6 @@
 
     edgeConsentPromise = new Promise((resolve) => {
       resolveEdgeConsent = resolve;
-      const preventDismiss = (e) => {
-        if (modal.hidden) return;
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          e.stopPropagation();
-          agreeBtn.focus();
-        }
-      };
-      document.addEventListener('keydown', preventDismiss, true);
 
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -165,14 +282,7 @@
         }
       });
 
-      declineBtn?.addEventListener('click', () => {
-        killAllAudio();
-        try { sessionStorage.setItem('chatsafe.edgeConsentDeclined', '1'); } catch { /* ignore */ }
-        modal.hidden = true;
-        setAppRegionsLocked(true, true);
-        if (declinedBanner) declinedBanner.hidden = false;
-        reopenBtn?.focus();
-      });
+      declineBtn?.addEventListener('click', declineConsent);
 
       agreeBtn.addEventListener('click', () => {
         const ts = new Date().toISOString();
@@ -183,7 +293,8 @@
           sessionStorage.setItem('chatsafe.edgeConsentAt', ts);
           sessionStorage.removeItem('chatsafe.edgeConsentDeclined');
         } catch { /* ignore storage restrictions */ }
-        document.removeEventListener('keydown', preventDismiss, true);
+        releaseConsentTrap?.(true);
+        releaseConsentTrap = null;
         modal.hidden = true;
         if (declinedBanner) declinedBanner.hidden = true;
         setAppRegionsLocked(false);
@@ -203,9 +314,23 @@
   /* =========================================================================
    * PHASE 1: DUAL-MODE SECURITY & BYOK INITIALIZATION (Cloud Run + Edge BYOK)
    * ========================================================================= */
+  /**
+   * Reads a trimmed credential or flag from volatile `sessionStorage`.
+   *
+   * @param {string} name Storage key name.
+   * @returns {string} Trimmed stored string, or empty string if absent.
+   */
   function getSessionKey(name) {
     try { return (sessionStorage.getItem(name) || '').trim(); } catch { return ''; }
   }
+
+  /**
+   * Persists or removes a credential or flag in volatile `sessionStorage`.
+   *
+   * @param {string} name Storage key name.
+   * @param {string} value Value to persist; empty clears the key.
+   * @returns {void}
+   */
   function setSessionKey(name, value) {
     try {
       const clean = String(value || '').trim();
@@ -219,6 +344,12 @@
     setSessionKey('GEMINI_API_KEY', val);
   };
 
+  /**
+   * Updates the header/panel connection indicator badge for Cloud Run, Edge BYOK, or Offline mode.
+   *
+   * @param {'cloud'|'byok'|'offline'} mode Active inference transport mode.
+   * @returns {void}
+   */
   function setConnectionStatus(mode) {
     const pill = $('geminiStatusPill');
     if (!pill) return;
@@ -227,6 +358,11 @@
     else pill.textContent = '🟡 Offline: Local Rule Engine (Click for Edge BYOK)';
   }
 
+  /**
+   * Synchronizes the API Key Manager button labels and active highlight state.
+   *
+   * @returns {void}
+   */
   function syncApiKeyButtons() {
     const hasKey = Boolean(getGeminiSessionKey());
     const manageBtn = $('apiKeyManageBtn');
@@ -236,8 +372,8 @@
   }
 
   /**
-   * Dynamically injects a glassmorphism BYOK configuration modal over app.html
-   * allowing users to enter, view, update, skip, or clear their API keys in sessionStorage.
+   * Dynamically injects an accessible glassmorphism BYOK configuration modal over `app.html`
+   * with full ARIA dialog attributes, trapped keyboard focus, and Escape-to-close handling.
    *
    * @param {(hasKey: boolean) => void} [onSaved] Optional callback invoked after submit, skip, or clear.
    * @param {string} [promptText] Instructional message rendered inside the modal dialog.
@@ -251,6 +387,7 @@
       overlay.setAttribute('role', 'dialog');
       overlay.setAttribute('aria-modal', 'true');
       overlay.setAttribute('aria-labelledby', 'byokModalTitle');
+      overlay.setAttribute('aria-describedby', 'byokModalDesc');
       Object.assign(overlay.style, {
         position: 'fixed', inset: '0', zIndex: '10050',
         display: 'grid', placeItems: 'center', padding: '1rem',
@@ -285,7 +422,7 @@
           <button type="button" id="byokCloseBtn" aria-label="Close modal" style="background:transparent;border:0;color:inherit;cursor:pointer;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center">${CLOSE_SVG}</button>
         </div>
         <p style="margin:0;font-size:.82rem;font-weight:700;color:${currentGemini ? '#10b981' : '#f59e0b'}">${statusBadge}</p>
-        <p style="margin:0;font-size:.9rem;line-height:1.5;color:var(--muted, #b8c7e0)">
+        <p id="byokModalDesc" style="margin:0;font-size:.9rem;line-height:1.5;color:var(--muted, #b8c7e0)">
           ${promptText} Keys stay strictly in volatile <code>sessionStorage</code>.
         </p>
         <label style="display:grid;gap:.3rem;font-size:.84rem;font-weight:600">
@@ -315,12 +452,24 @@
       overlay.appendChild(card);
       document.body.appendChild(overlay);
 
+      let releaseByokTrap = null;
       const finish = (key) => {
+        releaseByokTrap?.(false);
+        releaseByokTrap = null;
         overlay.remove();
         syncApiKeyButtons();
         onSaved?.(Boolean(key));
         resolve(key || '');
       };
+      const dismissModal = () => {
+        setSessionKey('BYOK_DISMISSED', '1');
+        finish(getGeminiSessionKey());
+      };
+      releaseByokTrap = trapModalFocus(overlay, { onEscape: dismissModal });
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) dismissModal();
+      });
+
       const toggleVisBtn = $('byokToggleVisBtn');
       const geminiInputEl = $('byokGeminiInput');
       toggleVisBtn?.addEventListener('click', (e) => {
@@ -369,10 +518,7 @@
         toast('🗑️ Stored API keys cleared from sessionStorage.');
         finish('');
       });
-      $('byokCloseBtn').addEventListener('click', () => {
-        setSessionKey('BYOK_DISMISSED', '1');
-        finish(getGeminiSessionKey());
-      });
+      $('byokCloseBtn').addEventListener('click', dismissModal);
       $('byokGeminiInput')?.focus();
     });
   }
@@ -474,7 +620,7 @@
    *
    * @param {string} userText Raw user utterance or suspicious message.
    * @param {string} apiKey User-provided Google Gemini API key.
-   * @returns {Promise<{intent: 'SAFE'|'SCAM'|'CIVIC', confidence_score: number, threat_vectors: string[], action_payload: object, _source: string}>}
+   * @returns {Promise<Object>} Normalized Gemini intent verdict and action payload.
    */
   async function processWithGemini(userText, apiKey) {
     const cleanKey = String(apiKey || '').trim();
@@ -548,6 +694,9 @@
         details: summary,
         action: nextSteps[0] || '',
       };
+    } catch (err) {
+      console.warn('[Chat_Safe][Gemini] Edge BYOK request failed:', err?.message || err);
+      throw err;
     } finally {
       clearTimeout(timer);
     }
@@ -559,16 +708,22 @@
    * Synchronizes SAFE (0-25), MODERATE (26-65), CRITICAL SCAM (66-100), and CIVIC paths.
    *
    * @param {string} userText Citizen input or voice transcript.
-   * @returns {Promise<object>} Structured Gemini-compatible payload.
+   * @returns {Promise<Object>} Structured Gemini-compatible verdict payload.
    */
   async function runMockFallbackEngine(userText) {
     const clean = String(userText || '').trim();
-    const base = await API.call('analyze', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch(() => null);
+    const base = await API.call('analyze', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch((err) => {
+      console.warn('[Chat_Safe][Fallback] Local analyze call failed:', err?.message || err);
+      return null;
+    });
 
     const civicRe = /\b(water\s*pipe|water|pipe|pothole|road|street\s*light|streetlight|drainage|sewage|garbage|trash|panchayat|municipality|ward)\b/i;
     const isCivic = base?.intent === 'CIVIC' || (civicRe.test(clean) && !/\b(electricity\s*bill|disconnect|otp|upi|arrest|cbi)\b/i.test(clean));
     if (isCivic) {
-      const kit = base?.urimaiKit || await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch(() => null);
+      const kit = base?.urimaiKit || await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch((err) => {
+        console.warn('[Chat_Safe][Fallback] Local urimai kit generation failed:', err?.message || err);
+        return null;
+      });
       return {
         _source: 'mock-fallback',
         intent: 'CIVIC',
@@ -705,7 +860,7 @@
    *  4. Bulletproof Mock Fallback Engine when skipped or unreachable.
    *
    * @param {string} text Cleaned message or speech transcript to analyze.
-   * @returns {Promise<object>} Structured routing verdict.
+   * @returns {Promise<Object>} Structured routing verdict.
    */
   async function analyzeIntent(text) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -734,8 +889,8 @@
           setConnectionStatus('cloud');
           return { ...serverData, _source: 'cloud-run' };
         }
-      } catch {
-        /* Server unreachable -> fall through seamlessly to Edge BYOK / Fallback */
+      } catch (err) {
+        console.warn('[Chat_Safe][Analyze] Server endpoint unreachable, falling back to Edge BYOK/local engine:', err?.message || err);
       }
     }
 
@@ -748,7 +903,8 @@
     if (edgeKey) {
       try {
         return await processWithGemini(text, edgeKey);
-      } catch {
+      } catch (err) {
+        console.warn('[Chat_Safe][Analyze] Edge Gemini fallback triggered:', err?.message || err);
         setConnectionStatus('offline');
         toast('Gemini API unreachable or invalid key — switched to Mock Fallback Engine.');
         const sim = await runMockFallbackEngine(text);
@@ -791,7 +947,7 @@
    * Acquires browser GPS coordinates inside strict error boundaries and resolves a formatted
    * street address via Google Maps Reverse Geocoding API (with server and simulated ward fallbacks).
    *
-   * @returns {Promise<{address: string, coords?: {lat: number, lng: number}, source: string}>} Resolved civic location metadata.
+   * @returns {Promise<Object>} Resolved civic location metadata (`address`, optional `coords`, and `source`).
    */
   async function getGoogleMapsLocation() {
     const fallbackAddress = 'Location: Simulated Ward 12, Coimbatore, Tamil Nadu';
@@ -809,15 +965,21 @@
         try {
           navigator.geolocation.getCurrentPosition(
             (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-            () => { denied = true; resolve(null); },
+            (geoErr) => {
+              console.warn('[Chat_Safe][Geolocation] Position lookup failed or denied:', { code: geoErr?.code, message: geoErr?.message });
+              denied = true;
+              resolve(null);
+            },
             { timeout: 3500, maximumAge: 60_000 },
           );
-        } catch {
+        } catch (err) {
+          console.warn('[Chat_Safe][Geolocation] Hardware geolocation call threw:', err?.message || err);
           denied = true;
           resolve(null);
         }
       });
-    } catch {
+    } catch (err) {
+      console.warn('[Chat_Safe][Geolocation] Geolocation wrapper boundary:', err?.message || err);
       denied = true;
       position = null;
     }
@@ -843,8 +1005,8 @@
           const addr = geoJson?.results?.[0]?.formatted_address;
           if (addr) return { address: `${addr} (${coordLabel})`, coords: { lat, lng }, source: 'google-maps-api' };
         }
-      } catch {
-        /* graceful fallback below */
+      } catch (err) {
+        console.warn('[Chat_Safe][Maps] Reverse geocoding request failed, using coordinate fallback:', err?.message || err);
       }
     }
 
@@ -854,8 +1016,8 @@
         if (serverGeo?.address) {
           return { address: `${serverGeo.address} (${coordLabel})`, coords: { lat, lng }, source: serverGeo.source || 'server-geocode' };
         }
-      } catch {
-        /* fallback cleanly to coordinates */
+      } catch (err) {
+        console.warn('[Chat_Safe][Maps] Server reverse-geocode unavailable:', err?.message || err);
       }
     }
 
@@ -888,7 +1050,7 @@
    * from `sessionStorage`, falling back to `/api/safebrowsing` and local heuristics if offline.
    *
    * @param {string|string[]} urlOrList Single URL or array of URLs to inspect.
-   * @returns {Promise<{safe: boolean, matches: Array<{url: string, threatType: string}>, urls: string[], source: string}>} Threat verdict.
+   * @returns {Promise<Object>} Threat verdict (`safe`, `matches`, `urls`, and `source`).
    */
   async function checkSafeBrowsing(urlOrList) {
     const urls = (Array.isArray(urlOrList) ? urlOrList : [urlOrList]).filter(Boolean);
@@ -919,21 +1081,36 @@
             return { safe: false, matches: apiMatches, urls, source: 'google-safebrowsing-api' };
           }
         }
-      } catch {
-        /* fall through to server/offline heuristic check */
+      } catch (err) {
+        console.warn('[Chat_Safe][SafeBrowsing] API check failed, falling back to heuristic check:', err?.message || err);
       }
     }
 
     try {
       return await API.call('safebrowsing', { urls });
-    } catch {
+    } catch (err) {
+      console.warn('[Chat_Safe][SafeBrowsing] Local heuristic check failed, returning safe fallback:', err?.message || err);
       return { safe: true, matches: [], urls, source: 'offline-fallback' };
     }
   }
+
+  /**
+   * Updates the Kavach avatar animation state and status pill text.
+   *
+   * @param {'idle'|'listening'|'thinking'|'speaking'} state Current agent lifecycle state.
+   * @returns {void}
+   */
   function setAgentState(state) {
     kavach.setState(state);
     $('agentState').textContent = t(`state_${state}`);
   }
+
+  /**
+   * Displays a transient status toast notification at the bottom of the viewport.
+   *
+   * @param {string} msg Human-readable notification text.
+   * @returns {void}
+   */
   function toast(msg) {
     const el = $('toast');
     el.textContent = msg;
@@ -941,6 +1118,13 @@
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => el.classList.remove('show'), 3400);
   }
+
+  /**
+   * Highlights active agent nodes along the multi-agent orchestration bus indicator.
+   *
+   * @param {string[]} activeIds Array of agent bus identifiers to mark active.
+   * @returns {void}
+   */
   function pulseBus(activeIds) {
     document.querySelectorAll('#agentBus .bus-node').forEach((n) => {
       n.classList.toggle('active', activeIds.includes(n.dataset.bus));
@@ -950,6 +1134,12 @@
   /* ---------- Languages (All 23 Indian languages) ---------- */
   const activeDir = () => (langInfo(uiLang())?.rtl ? 'rtl' : 'ltr');
 
+  /**
+   * Synchronizes `dir="ltr|rtl"` attributes across dynamic result cards and chat logs.
+   *
+   * @param {'ltr'|'rtl'} dir Resolved writing direction for the active language.
+   * @returns {void}
+   */
   function syncDynamicDirections(dir) {
     const resolved = dir === 'rtl' ? 'rtl' : 'ltr';
     document.documentElement.dir = resolved;
@@ -971,6 +1161,12 @@
     if ($('fhEngLetter')) $('fhEngLetter').setAttribute('dir', 'ltr');
   }
 
+  /**
+   * Applies the selected UI language code, updates all `data-i18n` labels, and persists preference.
+   *
+   * @param {string} code ISO/Eighth-Schedule language code or `'auto'`.
+   * @returns {void}
+   */
   function applyLanguage(code) {
     lang = code === 'auto' || languages.some((l) => l.code === code) ? code : 'en';
     const info = langInfo(uiLang());
@@ -1003,10 +1199,20 @@
     store('lang', lang);
   }
 
+  /**
+   * Loads the 23 Indian language catalog from the API layer and populates the `#lang` selector.
+   *
+   * @returns {Promise<void>} Resolves once language options are rendered and applied.
+   */
   async function loadLanguages() {
     try {
-      languages = (await API.call('languages')).languages;
-    } catch { /* fallback */ }
+      const payload = await API.call('languages');
+      if (Array.isArray(payload?.languages) && payload.languages.length) {
+        languages = payload.languages;
+      }
+    } catch (err) {
+      console.warn('[Chat_Safe][i18n] Failed to load remote language catalog, using fallback:', err?.message || err);
+    }
     const opts = [new Option(t('autoDetect'), 'auto'), ...languages.map((l) => new Option(`${l.native} — ${l.name}`, l.code))];
     $('lang').replaceChildren(...opts);
     const saved = load('lang');
@@ -1028,30 +1234,73 @@
 
   /* ---------- Voice Out (23 languages) ---------- */
   let voices = [];
-  const refreshVoices = () => { voices = 'speechSynthesis' in window ? window.speechSynthesis.getVoices() : []; };
+  const refreshVoices = () => {
+    try {
+      voices = 'speechSynthesis' in window ? window.speechSynthesis.getVoices() : [];
+    } catch (err) {
+      console.warn('[Chat_Safe][SpeechSynthesis] Unable to enumerate voices:', err?.message || err);
+      voices = [];
+    }
+  };
   if ('speechSynthesis' in window) {
     refreshVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', refreshVoices);
+    try {
+      window.speechSynthesis.addEventListener?.('voiceschanged', refreshVoices);
+    } catch (err) {
+      console.warn('[Chat_Safe][SpeechSynthesis] voiceschanged listener registration failed:', err?.message || err);
+    }
   }
   const voiceFor = (code) => {
     const tag = langInfo(code).speech.toLowerCase();
     return voices.find((v) => v.lang.toLowerCase() === tag) || voices.find((v) => v.lang.toLowerCase().startsWith(`${code}-`));
   };
 
-  function speak(text, code = replyLang) {
+  /**
+   * Triggers Web Speech API (`speechSynthesis`) playback for a localized response inside
+   * strict hardware/browser error boundaries so unavailable TTS never throws.
+   *
+   * @param {string} text Text string to synthesize aloud.
+   * @param {string} [code=replyLang] Target Indian language code for voice selection.
+   * @returns {Promise<boolean>} Resolves `true` when playback completes, or `false` if unavailable/failed.
+   */
+  async function triggerVoiceSynthesis(text, code = replyLang) {
+    if (!text || typeof window === 'undefined' || !('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      return false;
+    }
     return new Promise((resolve) => {
-      if (!text || !('speechSynthesis' in window)) { resolve(false); return; }
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = langInfo(code).speech;
-      const v = voiceFor(code);
-      if (v) u.voice = v;
-      u.rate = 0.96;
-      u.onstart = () => setAgentState('speaking');
-      u.onboundary = () => kavach.pulse();
-      u.onend = u.onerror = () => { setAgentState('idle'); resolve(true); };
-      window.speechSynthesis.speak(u);
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = langInfo(code).speech;
+        const v = voiceFor(code);
+        if (v) u.voice = v;
+        u.rate = 0.96;
+        u.onstart = () => setAgentState('speaking');
+        u.onboundary = () => kavach.pulse();
+        u.onend = () => { setAgentState('idle'); resolve(true); };
+        u.onerror = (evt) => {
+          console.warn('[Chat_Safe][SpeechSynthesis] Utterance error:', evt?.error || 'unknown');
+          setAgentState('idle');
+          resolve(false);
+        };
+        window.speechSynthesis.speak(u);
+      } catch (err) {
+        console.warn('[Chat_Safe][SpeechSynthesis] Hardware speech playback failed:', err?.message || err);
+        setAgentState('idle');
+        resolve(false);
+      }
     });
+  }
+
+  /**
+   * Speaks a reply aloud via `triggerVoiceSynthesis`.
+   *
+   * @param {string} text Text string to speak.
+   * @param {string} [code=replyLang] Language code for voice selection.
+   * @returns {Promise<boolean>} Resolves when synthesis finishes or falls back cleanly.
+   */
+  function speak(text, code = replyLang) {
+    return triggerVoiceSynthesis(text, code);
   }
 
   /* ---------- Voice In ---------- */
@@ -1072,7 +1321,9 @@
       return;
     }
     try {
-      window.speechSynthesis?.cancel();
+      try { window.speechSynthesis?.cancel(); } catch (err) {
+        console.warn('[Chat_Safe][SpeechSynthesis] Cancel before mic start failed:', err?.message || err);
+      }
       Sound.play('blip');
       const rec = new SR();
       rec.lang = lang === 'auto' ? 'en-IN' : langInfo(lang).speech;
@@ -1088,6 +1339,7 @@
         if (said) onText(said);
       };
       rec.onerror = (evt) => {
+        console.warn('[Chat_Safe][SpeechRecognition] Microphone capture error:', { error: evt?.error, message: evt?.message });
         const denied = evt?.error === 'not-allowed' || evt?.error === 'service-not-allowed';
         const msg = denied
           ? 'Microphone permission denied. Please type your message below.'
@@ -1102,7 +1354,8 @@
         if ($('agentState').textContent === t('state_listening')) setAgentState('idle');
       };
       rec.start();
-    } catch {
+    } catch (err) {
+      console.warn('[Chat_Safe][SpeechRecognition] Failed to initialize microphone hardware:', err?.message || err);
       recognizer = null;
       $('mic').setAttribute('aria-pressed', 'false');
       $('micLabel').textContent = t('micStart');
@@ -1119,6 +1372,15 @@
   }));
 
   /* ---------- Chat & Speed-Dial '9' Voice IVR ---------- */
+  /**
+   * Appends a single directional message bubble into a chat log list element.
+   *
+   * @param {HTMLElement} logEl Target `<ol>` or `<ul>` message container.
+   * @param {string} who Display sender label.
+   * @param {string} cls CSS role class (`you`, `kavach`, `them`, `paati`).
+   * @param {string} text Message text content.
+   * @returns {void}
+   */
   function appendChat(logEl, who, cls, text) {
     const dir = activeDir();
     const li = document.createElement('li');
@@ -1135,12 +1397,28 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
 
+  /**
+   * Records an agent or citizen turn in the primary chat log and local case history store.
+   *
+   * @param {string} who Sender label.
+   * @param {string} cls CSS message class.
+   * @param {string} text Message content.
+   * @returns {void}
+   */
   function addAgentMessage(who, cls, text) {
     appendChat($('agentLog'), who, cls, text);
     caseStore.add(cls === 'you' ? 'you' : 'kavach', text, kavach.mood, uiLang());
     renderCases();
   }
 
+  /**
+   * Renders the hero intent verdict banner card (Urimai Civic vs. Kavach Scam/Moderate/Safe).
+   *
+   * @param {Object} verdict Routed AI or rule-engine verdict payload.
+   * @param {string} rawText Original citizen prompt or pasted text.
+   * @param {string} [geoAddress=''] Optional resolved GPS/Maps street address.
+   * @returns {void}
+   */
   function renderHeroDynamicCard(verdict, rawText, geoAddress = '') {
     const card = $('heroDynamicCard');
     if (!card || !verdict) return;
@@ -1218,8 +1496,12 @@
       </div>
     `;
     $('hdcCopy1930Btn')?.addEventListener('click', async () => {
-      await navigator.clipboard?.writeText(draft).catch(() => {});
-      toast('1930 Cybercrime complaint copied!');
+      try {
+        await navigator.clipboard?.writeText(draft);
+        toast('1930 Cybercrime complaint copied!');
+      } catch (err) {
+        console.warn('[Chat_Safe][Clipboard] Copy 1930 complaint failed:', err?.message || err);
+      }
     });
     $('hdcFullScanBtn')?.addEventListener('click', () => {
       $('message').value = rawText;
@@ -1228,8 +1510,16 @@
     });
   }
 
-  async function askAgent(text) {
-    const clean = text.trim();
+  /**
+   * Processes a citizen's spoken or typed message through intent routing, updates the 3D Kavach
+   * avatar, triggers GPS lookup for Urimai civic petitions or Family SOS alerts for critical scams,
+   * and optionally synthesizes the response aloud.
+   *
+   * @param {string} text User message or voice transcript.
+   * @returns {Promise<void>} Resolves once routing, UI updates, and optional speech complete.
+   */
+  async function handleUserMessage(text) {
+    const clean = String(text || '').trim();
     if (!clean) return;
     $('agentInput').value = '';
     addAgentMessage('You', 'you', clean);
@@ -1249,7 +1539,13 @@
         setMood(routed._offlineFallback ? 'suspicious' : 'civic');
         Sound.play('civic');
 
-        const kit = routed.urimaiKit || await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' });
+        const kit = routed.urimaiKit || await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch((err) => {
+          console.warn('[Chat_Safe][Urimai] Kit generation fallback:', err?.message || err);
+          return null;
+        });
+        if (!kit) {
+          throw new Error('Unable to generate Urimai kit');
+        }
         if (ap.draft_text) kit.englishLetter = ap.draft_text;
         if (ap.regional_draft_text) kit.regionalLetter = ap.regional_draft_text;
         if (ap.department_or_agency) kit.department = ap.department_or_agency;
@@ -1272,7 +1568,7 @@
           if ($('detected-address')) $('detected-address').textContent = geo.address;
           renderHeroDynamicCard(routed, clean, geo.address);
         }
-        if ($('autoSpeak').checked) await speak(ap.summary || kit.summary, uiLang());
+        if ($('autoSpeak').checked) await triggerVoiceSynthesis(ap.summary || kit.summary, uiLang());
         else setAgentState('idle');
         return;
       }
@@ -1304,16 +1600,17 @@
         },
       }, clean);
 
-      if (isThreat) {
+      if (tier.tier === 'critical') {
         triggerFamilySos(clean, {
           scamType: vectors[0] || ap.department_or_agency || 'Cyber Scam Alert',
-          score,
+          score: tier.score,
           lang: uiLang(),
         });
       }
-      if ($('autoSpeak').checked) await speak(summaryLine, uiLang());
+      if ($('autoSpeak').checked) await triggerVoiceSynthesis(summaryLine, uiLang());
       else setAgentState('idle');
-    } catch {
+    } catch (err) {
+      console.warn('[Chat_Safe][Agent] Message handling failed, reverting to offline notice:', err?.message || err);
       setAgentState('idle');
       setMood('suspicious');
       const notice = API.OFFLINE_NOTICE || 'Network unstable. Reverting to Offline Rule Engine. Please verify manually.';
@@ -1322,7 +1619,22 @@
     }
   }
 
-  // Keypad Phone Speed-Dial '9'
+  /**
+   * Dispatches a user message to the Kavach × Urimai agent pipeline.
+   *
+   * @param {string} text User message or speech transcript.
+   * @returns {Promise<void>} Resolves once `handleUserMessage` completes.
+   */
+  function askAgent(text) {
+    return handleUserMessage(text);
+  }
+
+  /**
+   * Simulates pressing Speed-Dial `9` on a feature phone, plays DTMF + ring audio,
+   * greets the user in their selected regional language, and speaks if enabled.
+   *
+   * @returns {void}
+   */
   function triggerSpeedDial9() {
     Sound.playDtmf('9');
     setTimeout(() => Sound.play('ring'), 180);
@@ -1370,9 +1682,21 @@
   });
 
   /* ---------- Learned Scam HUD ---------- */
+  /**
+   * Reads learned scam category IDs from `localStorage`.
+   *
+   * @returns {string[]} Array of unlocked category identifiers.
+   */
   function getLearned() {
     try { return (localStorage.getItem('chatsafe.learned') || '').split(',').filter(Boolean); } catch { return []; }
   }
+
+  /**
+   * Unlocks and persists a scam literacy badge in the HUD.
+   *
+   * @param {string} id Category identifier from `CATEGORIES`.
+   * @returns {void}
+   */
   function unlockCategory(id) {
     if (!CATEGORIES.includes(id)) return;
     const set = new Set(getLearned());
@@ -1383,6 +1707,12 @@
     renderHud();
     toast(`Unlocked scam badge: ${id}`);
   }
+
+  /**
+   * Renders the 8-scam progress HUD badges.
+   *
+   * @returns {void}
+   */
   function renderHud() {
     const got = new Set(getLearned());
     $('hudCount').textContent = `${got.size}/${CATEGORIES.length}`;
@@ -1396,6 +1726,13 @@
 
   /* ---------- Tabs ---------- */
   const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+
+  /**
+   * Activates a tabpanel, stops active audio, and synchronizes ARIA `aria-selected` states.
+   *
+   * @param {HTMLElement} tab Target tab button element.
+   * @returns {void}
+   */
   function activateTab(tab) {
     killAllAudio();
     tabs.forEach((btn) => {
@@ -1408,6 +1745,12 @@
   tabs.forEach((btn) => btn.addEventListener('click', () => activateTab(btn)));
 
   /* ---------- TAB 1: RADAR & DAILY VIDEO REELS ---------- */
+  /**
+   * Escapes HTML and highlights `[..._REDACTED]` PII tokens for safe rendering.
+   *
+   * @param {string} text Raw or redacted feed message.
+   * @returns {string} HTML string with `.redacted-tag` spans.
+   */
   function highlightRedacted(text) {
     return String(text || '')
       .replace(/&/g, '&amp;')
@@ -1419,72 +1762,86 @@
   let radarCity = 'All';
   let radarFeedMode = 'all'; // 'all' | 'scams' | 'civic' | 'video'
 
+  /**
+   * Toggles visibility of Radar video, scam, and civic sections based on active feed filter.
+   *
+   * @returns {void}
+   */
   function applyRadarFeedVisibility() {
     $('radarVideoSection').hidden = !(radarFeedMode === 'all' || radarFeedMode === 'video');
     $('radarScamSection').hidden = !(radarFeedMode === 'all' || radarFeedMode === 'scams');
     $('radarCivicSection').hidden = !(radarFeedMode === 'all' || radarFeedMode === 'civic');
   }
 
+  /**
+   * Fetches and renders the Drishti Radar threat feed, civic issues list, and daily video reels.
+   *
+   * @returns {Promise<void>} Resolves once radar cards and video reels are mounted.
+   */
   async function renderRadar() {
-    const data = await API.call('radar', { city: radarCity });
-    $('radarScamCount').textContent = `${data.scams.length} active patterns`;
-    $('radarCivicCount').textContent = `${data.civic.length} active issues`;
+    try {
+      const data = await API.call('radar', { city: radarCity });
+      $('radarScamCount').textContent = `${data.scams.length} active patterns`;
+      $('radarCivicCount').textContent = `${data.civic.length} active issues`;
 
-    // Scams
-    $('radarScamList').innerHTML = data.scams.map((s) => `
-      <article class="radar-item scam" data-tone="scam">
-        <div class="radar-meta">
-          <span class="pill red">🔥 ${s.category}</span>
-          <span>📍 ${s.city}</span>
-          <span>· ${s.timeAgo}</span>
-          <span style="margin-left:auto">${s.reports} reports</span>
-        </div>
-        <p style="margin:0">${redactionEnabled ? highlightRedacted(s.redactedText) : s.rawText}</p>
-        <div class="actions" style="margin:0">
-          <button type="button" class="chip sm radar-scan-btn" data-text="${encodeURIComponent(s.rawText)}">Scan in AI Scanner →</button>
-          <span class="small muted">${redactionEnabled ? `🔒 ${s.redactedCount} PII fields masked` : '⚠️ Unredacted preview'}</span>
-        </div>
-      </article>
-    `).join('');
+      // Scams
+      $('radarScamList').innerHTML = data.scams.map((s) => `
+        <article class="radar-item scam" data-tone="scam">
+          <div class="radar-meta">
+            <span class="pill red">🔥 ${s.category}</span>
+            <span>📍 ${s.city}</span>
+            <span>· ${s.timeAgo}</span>
+            <span style="margin-left:auto">${s.reports} reports</span>
+          </div>
+          <p style="margin:0">${redactionEnabled ? highlightRedacted(s.redactedText) : s.rawText}</p>
+          <div class="actions" style="margin:0">
+            <button type="button" class="chip sm radar-scan-btn" data-text="${encodeURIComponent(s.rawText)}">Scan in AI Scanner →</button>
+            <span class="small muted">${redactionEnabled ? `🔒 ${s.redactedCount} PII fields masked` : '⚠️ Unredacted preview'}</span>
+          </div>
+        </article>
+      `).join('');
 
-    $('radarScamList').querySelectorAll('.radar-scan-btn').forEach((b) => {
-      b.addEventListener('click', () => {
-        $('message').value = decodeURIComponent(b.dataset.text);
-        activateTab($('tab-scanner'));
-        runSmartScan($('message').value);
+      $('radarScamList').querySelectorAll('.radar-scan-btn').forEach((b) => {
+        b.addEventListener('click', () => {
+          $('message').value = decodeURIComponent(b.dataset.text);
+          activateTab($('tab-scanner'));
+          runSmartScan($('message').value);
+        });
       });
-    });
 
-    // Civic Watch
-    $('radarCivicList').innerHTML = data.civic.map((c) => `
-      <article class="radar-item civic" data-tone="civic">
-        <div class="radar-meta">
-          <span class="pill blue">⚠️ ${c.department}</span>
-          <span>📍 ${c.city} (${c.ward})</span>
-          <span style="margin-left:auto">${c.timeAgo}</span>
-        </div>
-        <strong>${c.title}</strong>
-        <p class="small muted" style="margin:0">${c.summary}</p>
-        <div class="actions" style="margin:0;align-items:center">
-          <span class="pill green">${c.status}</span>
-          <button type="button" class="chip sm civic-upvote">👍 Support (<span>${c.upvotes}</span>)</button>
-        </div>
-      </article>
-    `).join('');
+      // Civic Watch
+      $('radarCivicList').innerHTML = data.civic.map((c) => `
+        <article class="radar-item civic" data-tone="civic">
+          <div class="radar-meta">
+            <span class="pill blue">⚠️ ${c.department}</span>
+            <span>📍 ${c.city} (${c.ward})</span>
+            <span style="margin-left:auto">${c.timeAgo}</span>
+          </div>
+          <strong>${c.title}</strong>
+          <p class="small muted" style="margin:0">${c.summary}</p>
+          <div class="actions" style="margin:0;align-items:center">
+            <span class="pill green">${c.status}</span>
+            <button type="button" class="chip sm civic-upvote">👍 Support (<span>${c.upvotes}</span>)</button>
+          </div>
+        </article>
+      `).join('');
 
-    $('radarCivicList').querySelectorAll('.civic-upvote').forEach((b) => {
-      b.addEventListener('click', () => {
-        const sp = b.querySelector('span');
-        sp.textContent = String(Number(sp.textContent) + 1);
-        Sound.play('blip');
+      $('radarCivicList').querySelectorAll('.civic-upvote').forEach((b) => {
+        b.addEventListener('click', () => {
+          const sp = b.querySelector('span');
+          sp.textContent = String(Number(sp.textContent) + 1);
+          Sound.play('blip');
+        });
       });
-    });
 
-    // Daily Video Reels (3-Column Grid)
-    window.ChatSafeReels?.renderReelsFeed($('reelScroller'), data.reels, {
-      onSpeak: (script) => speak(script, 'en'),
-    });
-    applyRadarFeedVisibility();
+      // Daily Video Reels (3-Column Grid)
+      window.ChatSafeReels?.renderReelsFeed($('reelScroller'), data.reels, {
+        onSpeak: (script) => speak(script, 'en'),
+      });
+      applyRadarFeedVisibility();
+    } catch (err) {
+      console.warn('[Chat_Safe][Radar] Failed to render radar feed:', err?.message || err);
+    }
   }
 
   document.querySelectorAll('#regionPills .region-pill').forEach((btn) => {
@@ -1513,8 +1870,13 @@
     const val = $('redactInput').value.trim();
     if (!val) return;
     pulseBus(['netra']);
-    const r = await API.call('redact', { text: val });
-    $('redactOut').innerHTML = `Result (${r.count} masked): ${highlightRedacted(r.redacted)}`;
+    try {
+      const r = await API.call('redact', { text: val });
+      $('redactOut').innerHTML = `Result (${r.count} masked): ${highlightRedacted(r.redacted)}`;
+    } catch (err) {
+      console.warn('[Chat_Safe][Redact] PII redaction request failed:', err?.message || err);
+      toast('Unable to run PII redaction right now.');
+    }
   });
 
   // Verified User Video Publisher
@@ -1804,7 +2166,8 @@
       }
       $('engine').textContent = `Engine: ${res.engine}`;
       for (const id of res.categoryIds || []) unlockCategory(id);
-    } catch {
+    } catch (err) {
+      console.warn('[Chat_Safe][SmartScan] Scan pipeline failed, switching to offline notice:', err?.message || err);
       $('scanBox').classList.remove('scanning');
       setMood('suspicious');
       const notice = 'Network offline - switching to local rules. Please verify manually.';
@@ -1813,6 +2176,11 @@
     }
   }
 
+  /**
+   * Renders up to 6 recent scanner verdicts in the session scan history list.
+   *
+   * @returns {void}
+   */
   function renderScanHistory() {
     $('scanHistoryList').innerHTML = scanHistory.slice(0, 6).map((h) => `
       <li class="got">
@@ -1834,8 +2202,12 @@
     if (lastResult) speak(`${lastResult.verdict}. ${(lastResult.nextSteps || [])[0] || ''}`, lastResult.lang);
   });
   $('copyComplaint').addEventListener('click', async () => {
-    await navigator.clipboard?.writeText($('complaint').value).catch(() => {});
-    toast('1930 Cybercrime complaint copied!');
+    try {
+      await navigator.clipboard?.writeText($('complaint').value);
+      toast('1930 Cybercrime complaint copied!');
+    } catch (err) {
+      console.warn('[Chat_Safe][Clipboard] Copy complaint failed:', err?.message || err);
+    }
   });
   $('sendToFamilyBtn').addEventListener('click', () => {
     if (!activeUrimaiKit) return;
@@ -1844,11 +2216,23 @@
   });
   $('usDownloadPdfBtn').addEventListener('click', async () => {
     if (!activeUrimaiKit) return;
-    await window.ChatSafePDF.generateUrimaiPdf(activeUrimaiKit, activePhotoDataUrl);
-    toast('📄 Bilingual Urimai PDF downloaded!');
+    try {
+      await window.ChatSafePDF.generateUrimaiPdf(activeUrimaiKit, activePhotoDataUrl);
+      toast('📄 Bilingual Urimai PDF downloaded!');
+    } catch (err) {
+      console.warn('[Chat_Safe][PDF] Failed to generate Urimai PDF:', err?.message || err);
+      toast('Unable to generate PDF right now.');
+    }
   });
 
   /* ---------- TAB 3: FAMILY HUB (O2O + CM BYPASS + LOCAL PROXY) ---------- */
+  /**
+   * Surfaces a critical Family SOS banner when a high-risk scam is detected.
+   *
+   * @param {string} utterance Original citizen report text.
+   * @param {Object} analysis Alert metadata (`scamType`, `score`, `lang`).
+   * @returns {void}
+   */
   function triggerFamilySos(utterance, analysis) {
     $('familyBadge').hidden = false;
     $('familySosBanner').hidden = false;
@@ -1857,6 +2241,13 @@
   }
   $('sosDismiss').addEventListener('click', () => { $('familySosBanner').hidden = true; });
 
+  /**
+   * Populates the Family Hub view with an active Urimai civic petition kit,
+   * CM Helpline bypass payload, and WhatsApp Local Proxy link.
+   *
+   * @param {Object} kit Structured Urimai civic petition kit.
+   * @returns {void}
+   */
   function dispatchUrimaiKitToFamily(kit) {
     activeUrimaiKit = kit;
     $('familyBadge').hidden = false;
@@ -1879,19 +2270,34 @@
     toast('🚨 Family Hub updated: Urimai Action Kit Ready!');
   }
 
+  /**
+   * Initializes State CM Helpline portals and seeds the default Family Hub Urimai kit.
+   *
+   * @returns {Promise<void>} Resolves once portals and initial kit are rendered.
+   */
   async function initFamilyHub() {
-    statePortals = await API.call('portals');
-    $('portalStateSelect').replaceChildren(...Object.keys(statePortals).map((st) => new Option(st, st)));
-    const defaultKit = await API.call('urimai', {
-      text: 'The panchayat water pipe on my street in Ward 12 broke 3 days ago and no one is fixing it.',
-      lang: uiLang(),
-      location: 'Ward 12, RS Puram, Coimbatore',
-      state: 'Tamil Nadu',
-    });
-    dispatchUrimaiKitToFamily(defaultKit);
-    $('familyBadge').hidden = true; // hide unread badge for initial seed
+    try {
+      statePortals = await API.call('portals');
+      $('portalStateSelect').replaceChildren(...Object.keys(statePortals).map((st) => new Option(st, st)));
+      const defaultKit = await API.call('urimai', {
+        text: 'The panchayat water pipe on my street in Ward 12 broke 3 days ago and no one is fixing it.',
+        lang: uiLang(),
+        location: 'Ward 12, RS Puram, Coimbatore',
+        state: 'Tamil Nadu',
+      });
+      dispatchUrimaiKitToFamily(defaultKit);
+      $('familyBadge').hidden = true; // hide unread badge for initial seed
+    } catch (err) {
+      console.warn('[Chat_Safe][FamilyHub] Initialization failed:', err?.message || err);
+    }
   }
 
+  /**
+   * Updates the CM Helpline portal selector, links, and character-bounded grievance text.
+   *
+   * @param {string} stateName Indian state or union territory name.
+   * @returns {void}
+   */
   function updatePortalUI(stateName) {
     const p = statePortals[stateName] || statePortals['Tamil Nadu'];
     if (!p) return;
@@ -1908,15 +2314,29 @@
 
   $('portalStateSelect').addEventListener('change', (e) => updatePortalUI(e.target.value));
   $('copyPortalTextBtn').addEventListener('click', async () => {
-    await navigator.clipboard?.writeText($('portalCopyArea').value).catch(() => {});
-    toast('📋 CM Helpline portal text copied! Paste on the govt portal.');
+    try {
+      await navigator.clipboard?.writeText($('portalCopyArea').value);
+      toast('📋 CM Helpline portal text copied! Paste on the govt portal.');
+    } catch (err) {
+      console.warn('[Chat_Safe][Clipboard] Copy portal text failed:', err?.message || err);
+    }
   });
   $('copyProxyLinkBtn').addEventListener('click', async () => {
-    await navigator.clipboard?.writeText($('proxyLinkInput').value).catch(() => {});
-    toast('📋 Local Proxy WhatsApp link copied!');
+    try {
+      await navigator.clipboard?.writeText($('proxyLinkInput').value);
+      toast('📋 Local Proxy WhatsApp link copied!');
+    } catch (err) {
+      console.warn('[Chat_Safe][Clipboard] Copy proxy link failed:', err?.message || err);
+    }
   });
 
   // Pathway buttons (Local O2O vs Solution 1 Digital Bypass vs Solution 2 Local Proxy)
+  /**
+   * Switches between Local O2O, Digital-First CM Bypass, and Local Proxy Family Hub pathways.
+   *
+   * @param {'local'|'digital'|'proxy'} mode Selected resolution pathway.
+   * @returns {void}
+   */
   function setPathway(mode) {
     $('pathLocalBtn').setAttribute('aria-pressed', String(mode === 'local'));
     $('pathDigitalBtn').setAttribute('aria-pressed', String(mode === 'digital'));
@@ -1933,14 +2353,19 @@
     speak(activeUrimaiKit.originalText, activeUrimaiKit.lang || 'ta');
   });
   $('fhSwitchSample').addEventListener('click', async () => {
-    const kit = await API.call('urimai', {
-      text: 'Main road near Temple Street has deep broken potholes and streetlight is off for 2 weeks.',
-      lang: uiLang(),
-      location: 'Ward 4, Madurai',
-      state: 'Tamil Nadu',
-      reporter: 'Amma (Keypad Phone — Speed Dial 9)',
-    });
-    dispatchUrimaiKitToFamily(kit);
+    try {
+      const kit = await API.call('urimai', {
+        text: 'Main road near Temple Street has deep broken potholes and streetlight is off for 2 weeks.',
+        lang: uiLang(),
+        location: 'Ward 4, Madurai',
+        state: 'Tamil Nadu',
+        reporter: 'Amma (Keypad Phone — Speed Dial 9)',
+      });
+      dispatchUrimaiKitToFamily(kit);
+    } catch (err) {
+      console.warn('[Chat_Safe][FamilyHub] Failed to switch sample Urimai kit:', err?.message || err);
+      toast('Unable to load sample Urimai petition right now.');
+    }
   });
   $('fhPhotoInput').addEventListener('change', (e) => {
     const f = e.target.files?.[0];
@@ -1956,13 +2381,22 @@
       $('fhPhotoPreview').hidden = false;
       $('fhPhotoStatus').textContent = '✅ Photo attached! Will be embedded inside the PDF.';
     };
+    r.onerror = () => {
+      console.warn('[Chat_Safe][FileReader] Photo attachment read failed');
+      $('fhPhotoStatus').textContent = 'Unable to read photo file.';
+    };
     r.readAsDataURL(f);
   });
   $('fhPdfBtn').addEventListener('click', async () => {
     if (!activeUrimaiKit) return;
-    toast('Generating Unicode bilingual A4 PDF…');
-    await window.ChatSafePDF.generateUrimaiPdf(activeUrimaiKit, activePhotoDataUrl);
-    toast('📄 Urimai PDF downloaded with 5-signature table!');
+    try {
+      toast('Generating Unicode bilingual A4 PDF…');
+      await window.ChatSafePDF.generateUrimaiPdf(activeUrimaiKit, activePhotoDataUrl);
+      toast('📄 Urimai PDF downloaded with 5-signature table!');
+    } catch (err) {
+      console.warn('[Chat_Safe][PDF] Failed to generate Family Hub PDF:', err?.message || err);
+      toast('Unable to generate PDF right now.');
+    }
   });
 
   /* ---------- TAB 4: DAILY STREAK (SWIPE-TO-SURVIVE) ---------- */
@@ -1984,6 +2418,11 @@
   $('streakNum').textContent = gStreak;
   $('gStreak').textContent = gStreak;
 
+  /**
+   * Renders the current Swipe-to-Survive card or the end-of-deck streak summary.
+   *
+   * @returns {void}
+   */
   function renderGameCard() {
     if (gIdx >= DECK.length || gHearts <= 0) {
       $('gameBoard').hidden = true;
@@ -2013,6 +2452,12 @@
     $('gCard').style.transform = '';
   }
 
+  /**
+   * Evaluates a user's Safe vs. Scam swipe decision, updates hearts/streak, and reveals the clue.
+   *
+   * @param {boolean} saysScam True if the user swiped/selected SCAM, false for SAFE.
+   * @returns {void}
+   */
   function answerGame(saysScam) {
     if (!$('gResult').hidden || gIdx >= DECK.length) return;
     const card = DECK[gIdx];
@@ -2082,37 +2527,42 @@
     e.preventDefault();
     const lines = $('autoInput').value.split('\n').map((s) => s.trim()).filter(Boolean);
     if (!lines.length) return;
-    const res = await API.call('autopilot', {
-      messages: lines,
-      lang,
-      autoActions: {
-        scan: $('auScan').checked,
-        reply: $('auReply').checked,
-        warn: $('auWarn').checked,
-        report: $('auReport').checked,
-      },
-    });
-    $('autoOut').hidden = false;
-    $('autoBadge').hidden = false;
-    $('autoBadge').textContent = `${res.scanned} checked`;
-    $('autoOut').innerHTML = `
-      <div class="auto-worst lvl-${res.worst.level}">
-        <p class="aw-tag">Worst Threat: ${res.worst.scamType} (${res.worst.score}/100)</p>
-        <p class="aw-text">${res.worst.verdict}</p>
-      </div>
-      <ol class="auto-plan">
-        ${res.plan.map((st) => `
-          <li class="st ${st.tone === 'danger' ? 'st-danger' : 'st-auto'}">
-            <span class="st-ico">${st.icon || '⚡'}</span>
-            <div class="st-main">
-              <p class="st-title"><strong>${st.title}</strong></p>
-              <p class="st-why">${st.why}</p>
-              ${st.text ? `<pre class="st-text">${st.text}</pre>` : ''}
-            </div>
-          </li>
-        `).join('')}
-      </ol>
-    `;
+    try {
+      const res = await API.call('autopilot', {
+        messages: lines,
+        lang,
+        autoActions: {
+          scan: $('auScan').checked,
+          reply: $('auReply').checked,
+          warn: $('auWarn').checked,
+          report: $('auReport').checked,
+        },
+      });
+      $('autoOut').hidden = false;
+      $('autoBadge').hidden = false;
+      $('autoBadge').textContent = `${res.scanned} checked`;
+      $('autoOut').innerHTML = `
+        <div class="auto-worst lvl-${res.worst.level}">
+          <p class="aw-tag">Worst Threat: ${res.worst.scamType} (${res.worst.score}/100)</p>
+          <p class="aw-text">${res.worst.verdict}</p>
+        </div>
+        <ol class="auto-plan">
+          ${res.plan.map((st) => `
+            <li class="st ${st.tone === 'danger' ? 'st-danger' : 'st-auto'}">
+              <span class="st-ico">${st.icon || '⚡'}</span>
+              <div class="st-main">
+                <p class="st-title"><strong>${st.title}</strong></p>
+                <p class="st-why">${st.why}</p>
+                ${st.text ? `<pre class="st-text">${st.text}</pre>` : ''}
+              </div>
+            </li>
+          `).join('')}
+        </ol>
+      `;
+    } catch (err) {
+      console.warn('[Chat_Safe][Autopilot] Batch scan failed:', err?.message || err);
+      toast('Unable to run Autopilot batch scan right now.');
+    }
   });
 
   /* ---------- TAB 6: PAY-CHECK ---------- */
@@ -2121,8 +2571,13 @@
     const upi = $('upi').value.trim();
     if (!upi) return;
     pulseBus(['payguard']);
-    const r = await API.call('upi-check', { upi });
-    $('payResult').innerHTML = `<div class="urimai-card" style="border-color:${r.verdict === 'validated' ? 'var(--safe)' : 'var(--critical)'}"><strong>${r.verdict === 'validated' ? '✅ SEBI @valid Handle' : '⚠️ Not SEBI @valid'}</strong><p style="margin:0">${r.reason}</p></div>`;
+    try {
+      const r = await API.call('upi-check', { upi });
+      $('payResult').innerHTML = `<div class="urimai-card" style="border-color:${r.verdict === 'validated' ? 'var(--safe)' : 'var(--critical)'}"><strong>${r.verdict === 'validated' ? '✅ SEBI @valid Handle' : '⚠️ Not SEBI @valid'}</strong><p style="margin:0">${r.reason}</p></div>`;
+    } catch (err) {
+      console.warn('[Chat_Safe][PayCheck] UPI verification failed:', err?.message || err);
+      toast('Unable to verify UPI handle right now.');
+    }
   });
 
   /* ---------- TAB 7: PAATI DECOY ---------- */
@@ -2132,9 +2587,14 @@
     if (!msg) return;
     $('scammerMsg').value = '';
     appendChat($('chatLog'), 'Scammer', 'them', msg);
-    const r = await API.call('decoy', { text: msg, lang, turn: decoyTurn++ });
-    appendChat($('chatLog'), 'Kamala Paati', 'paati', r.reply);
-    if ($('autoSpeak').checked) speak(r.reply, uiLang());
+    try {
+      const r = await API.call('decoy', { text: msg, lang, turn: decoyTurn++ });
+      appendChat($('chatLog'), 'Kamala Paati', 'paati', r.reply);
+      if ($('autoSpeak').checked) await triggerVoiceSynthesis(r.reply, uiLang());
+    } catch (err) {
+      console.warn('[Chat_Safe][PaatiDecoy] Decoy reply generation failed:', err?.message || err);
+      appendChat($('chatLog'), 'Kamala Paati', 'paati', 'Aiyo, the line is breaking up... say that again slowly?');
+    }
   });
 
   /* ---------- TAB 8: 8 SCAMS GRID ---------- */
@@ -2168,12 +2628,15 @@
         (pos) => {
           $('geoStatus').textContent = `📍 Lat ${pos.coords.latitude.toFixed(4)}, Lng ${pos.coords.longitude.toFixed(4)} — Ward matched! Ready for Google Maps & CM Helpline routing.`;
         },
-        () => {
+        (geoErr) => {
+          console.warn('[Chat_Safe][Geolocation] Manual location probe failed:', { code: geoErr?.code, message: geoErr?.message });
           $('geoStatus').textContent = deniedMsg;
           if ($('detected-address')) $('detected-address').textContent = deniedMsg;
         },
+        { timeout: 5000, maximumAge: 60_000 },
       );
-    } catch {
+    } catch (err) {
+      console.warn('[Chat_Safe][Geolocation] Manual location hardware call threw:', err?.message || err);
       $('geoStatus').textContent = deniedMsg;
       if ($('detected-address')) $('detected-address').textContent = deniedMsg;
     }
@@ -2185,6 +2648,11 @@
   });
 
   /* ---------- Case Files Drawer & Help ---------- */
+  /**
+   * Renders saved local chat case summaries into the Case Files drawer.
+   *
+   * @returns {void}
+   */
   function renderCases() {
     const list = caseStore.search('').map((entry) => entry.case);
     $('caseCount').textContent = `${list.length} saved chats`;
@@ -2199,10 +2667,44 @@
       </li>
     `).join('');
   }
-  $('historyBtn').addEventListener('click', () => { $('cases').hidden = !$('cases').hidden; renderCases(); });
-  $('closeCases').addEventListener('click', () => { $('cases').hidden = true; });
+
+  let releaseCasesTrap = null;
+  const closeCasesDrawer = () => {
+    const drawer = $('cases');
+    if (!drawer || drawer.hidden) return;
+    drawer.hidden = true;
+    $('historyBtn')?.setAttribute('aria-expanded', 'false');
+    releaseCasesTrap?.(false);
+    releaseCasesTrap = null;
+  };
+  const openCasesDrawer = () => {
+    const drawer = $('cases');
+    if (!drawer) return;
+    drawer.hidden = false;
+    $('historyBtn')?.setAttribute('aria-expanded', 'true');
+    renderCases();
+    releaseCasesTrap?.(true);
+    releaseCasesTrap = trapModalFocus(drawer, {
+      onEscape: closeCasesDrawer,
+      restoreFocusTo: $('historyBtn'),
+    });
+    $('closeCases')?.focus();
+  };
+
+  $('historyBtn').addEventListener('click', () => {
+    if ($('cases').hidden) openCasesDrawer();
+    else closeCasesDrawer();
+  });
+  $('closeCases').addEventListener('click', closeCasesDrawer);
   $('openSearch').addEventListener('click', () => { $('searchBar').hidden = false; $('caseSearch').focus(); });
-  $('closeSearch').addEventListener('click', () => { $('searchBar').hidden = true; });
+  $('closeSearch').addEventListener('click', () => { $('searchBar').hidden = true; $('openSearch')?.focus(); });
+  $('searchBar')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      $('searchBar').hidden = true;
+      $('openSearch')?.focus();
+    }
+  });
   $('exportCases').addEventListener('click', () => {
     const blob = new Blob([caseStore.exportJson()], { type: 'application/json' });
     const a = document.createElement('a');
@@ -2218,11 +2720,27 @@
     $('soundBtn').setAttribute('aria-pressed', String(muted));
     if (muted) killAllAudio();
   });
-  $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
-  $('closeHelp').addEventListener('click', () => $('helpDialog').close());
+
+  const helpDialogEl = $('helpDialog');
+  $('helpBtn').addEventListener('click', () => {
+    try {
+      helpDialogEl?.showModal();
+      $('closeHelp')?.focus();
+    } catch (err) {
+      console.warn('[Chat_Safe][Dialog] Unable to open helpDialog:', err?.message || err);
+    }
+  });
+  $('closeHelp').addEventListener('click', () => helpDialogEl?.close());
+  helpDialogEl?.addEventListener('close', () => { $('helpBtn')?.focus(); });
 
   /* ---------- TAB 10: ISO/IEC 27701 DATA PRIVACY, CONSENT VAULT & COOKIE BANNER ---------- */
   let csrfPrivacyToken = '';
+
+  /**
+   * Extracts the `cs_csrf` token from `document.cookie` or returns the cached token.
+   *
+   * @returns {string} Active CSRF token string.
+   */
   function readCsrfCookie() {
     for (const part of String(document.cookie || '').split(';')) {
       const [k, ...v] = part.trim().split('=');
@@ -2231,21 +2749,35 @@
     return csrfPrivacyToken;
   }
 
+  /**
+   * Executes an ISO/IEC 27701 privacy API request against the Node server with CSRF protection
+   * and structured error logging.
+   *
+   * @param {string} endpoint Relative path under `api/` (e.g. `'privacy/export'`).
+   * @param {Object|null} [body] JSON request payload, or null/undefined for GET requests.
+   * @param {'GET'|'POST'|'PUT'|'DELETE'} [method] HTTP method override.
+   * @returns {Promise<Object>} Parsed JSON response payload from the server.
+   */
   async function privacyServerCall(endpoint, body, method = body ? 'POST' : 'GET') {
     const headers = {};
     if (body) headers['Content-Type'] = 'application/json';
     const csrf = readCsrfCookie();
     if (csrf && method !== 'GET') headers['X-CSRF-Token'] = csrf;
-    const res = await fetch(`api/${endpoint}`, {
-      method,
-      headers,
-      cache: 'no-store',
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (data.csrfToken) csrfPrivacyToken = data.csrfToken;
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    return data;
+    try {
+      const res = await fetch(`api/${endpoint}`, {
+        method,
+        headers,
+        cache: 'no-store',
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.csrfToken) csrfPrivacyToken = data.csrfToken;
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      return data;
+    } catch (err) {
+      console.warn('[Chat_Safe][PrivacyAPI] Request failed:', { endpoint, method, error: err?.message || err });
+      throw err;
+    }
   }
 
   $('privacyProfileForm')?.addEventListener('submit', async (e) => {
@@ -2314,7 +2846,8 @@
     if (API.mode() === 'server') {
       try {
         payload = await privacyServerCall('privacy/export');
-      } catch {
+      } catch (err) {
+        console.warn('[Chat_Safe][PrivacyExport] Server export failed, using local profile:', err?.message || err);
         payload = null;
       }
     }
@@ -2345,7 +2878,9 @@
       if (p) { p.marketingOptIn = false; store('privacyProfile', JSON.stringify(p)); }
     } catch { /* ignore */ }
     if (API.mode() === 'server') {
-      await privacyServerCall('privacy/unsubscribe', {}).catch(() => {});
+      await privacyServerCall('privacy/unsubscribe', {}).catch((err) => {
+        console.warn('[Chat_Safe][PrivacyUnsub] Server unsubscribe skipped:', err?.message || err);
+      });
     }
     if ($('privacyRightsStatus')) $('privacyRightsStatus').textContent = '🔕 Unsubscribed from all optional alert emails/digests.';
     toast('Unsubscribed cleanly.');
@@ -2354,7 +2889,9 @@
   $('privacyDeleteBtn')?.addEventListener('click', async () => {
     if (!window.confirm('Permanently delete your account, consent record, local history, and API keys?')) return;
     if (API.mode() === 'server') {
-      await privacyServerCall('auth/account', {}, 'DELETE').catch(() => {});
+      await privacyServerCall('auth/account', {}, 'DELETE').catch((err) => {
+        console.warn('[Chat_Safe][PrivacyDelete] Server account deletion skipped:', err?.message || err);
+      });
     }
     try { localStorage.clear(); sessionStorage.clear(); } catch { /* ignore */ }
     caseStore.clear();
@@ -2364,6 +2901,11 @@
   });
 
   /* ---------- Non-Dark-Pattern Cookie Consent Banner ---------- */
+  /**
+   * Shows or hides the cookie preferences banner based on saved consent choice.
+   *
+   * @returns {void}
+   */
   function syncCookieBanner() {
     const banner = $('cookieConsentBanner');
     if (!banner) return;
@@ -2394,17 +2936,15 @@
 
   /* ---------- Boot & BYOK Lifecycle ---------- */
   $('lang').addEventListener('change', (e) => applyLanguage(e.target.value));
-  (async () => {
-    await API.detect();
-    const syncConnectionBanner = () => {
-      if (API.mode() === 'server') setConnectionStatus('cloud');
-      else if (getGeminiSessionKey()) setConnectionStatus('byok');
-      else setConnectionStatus('offline');
-      syncApiKeyButtons();
-    };
-    if (getGeminiSessionKey()) API.setGeminiKey?.(getGeminiSessionKey());
-    syncConnectionBanner();
 
+  /**
+   * Initializes session-scoped Bring-Your-Own-Key (BYOK) bindings, updates connection indicators,
+   * and prompts for a Gemini API key after Edge Privacy consent when none is active.
+   *
+   * @param {() => void} [syncConnectionBanner] Callback that refreshes UI connection status badges.
+   * @returns {Promise<string>} Resolves to the active Gemini API key, or empty string if skipped.
+   */
+  async function initBYOK(syncConnectionBanner) {
     const openApiKeyManager = () => {
       showByokModal(
         syncConnectionBanner,
@@ -2413,42 +2953,70 @@
     };
     $('apiKeySettingsBtn')?.addEventListener('click', openApiKeyManager);
     $('apiKeyManageBtn')?.addEventListener('click', openApiKeyManager);
-    $('geminiStatusPill').style.cursor = 'pointer';
-    $('geminiStatusPill').title = 'Click to configure Gemini API Key for Edge AI Mode (BYOK in sessionStorage)';
-    $('geminiStatusPill').addEventListener('click', openApiKeyManager);
+    if ($('geminiStatusPill')) {
+      $('geminiStatusPill').style.cursor = 'pointer';
+      $('geminiStatusPill').title = 'Click to configure Gemini API Key for Edge AI Mode (BYOK in sessionStorage)';
+      $('geminiStatusPill').addEventListener('click', openApiKeyManager);
+    }
 
-    await loadLanguages();
-    await renderRadar();
-    await initFamilyHub();
-    renderScanHistory();
-    renderHud();
-    syncCookieBanner();
-    if (location.hash === '#tab-privacy' && $('tab-privacy')) activateTab($('tab-privacy'));
-
-    // Wait for Zero-Data-Retention Consent Gate, then prompt BYOK on first load if no key in sessionStorage
     await edgeConsentReady;
     if (!getGeminiSessionKey() && !getSessionKey('BYOK_DISMISSED')) {
-      await showByokModal(
+      return await showByokModal(
         syncConnectionBanner,
         'Enter your Google Gemini API Key to enable Live Gemini 2.5 Flash Edge AI, or click "Skip API Key" to use the built-in simulation engine:',
       );
     }
+    return getGeminiSessionKey();
+  }
 
-    // Handle prefill / share_target / ?try= from demo.html or landing page after consent & BYOK setup
-    const q = new URLSearchParams(location.search);
-    const prefill = q.get('prefill') || q.get('text');
-    const tryId = q.get('try');
-    if (prefill) {
-      $('message').value = prefill;
-      activateTab($('tab-scanner'));
-      runSmartScan(prefill);
-    } else if (tryId && window.SCAM_TYPES) {
-      const found = window.SCAM_TYPES.find((s) => s.id === tryId);
-      if (found) {
-        $('message').value = found.sample || found.says;
+  /**
+   * Orchestrates full application startup: backend capability detection, i18n catalog hydration,
+   * Radar & Family Hub seeding, Edge Consent + BYOK initialization, and URL query prefill routing.
+   *
+   * @returns {Promise<void>} Resolves once initial UI hydration and lifecycle gates finish.
+   */
+  async function bootstrapApp() {
+    try {
+      await API.detect();
+      const syncConnectionBanner = () => {
+        if (API.mode() === 'server') setConnectionStatus('cloud');
+        else if (getGeminiSessionKey()) setConnectionStatus('byok');
+        else setConnectionStatus('offline');
+        syncApiKeyButtons();
+      };
+      if (getGeminiSessionKey()) API.setGeminiKey?.(getGeminiSessionKey());
+      syncConnectionBanner();
+
+      await loadLanguages();
+      await renderRadar();
+      await initFamilyHub();
+      renderScanHistory();
+      renderHud();
+      syncCookieBanner();
+      if (location.hash === '#tab-privacy' && $('tab-privacy')) activateTab($('tab-privacy'));
+
+      await initBYOK(syncConnectionBanner);
+
+      // Handle prefill / share_target / ?try= from demo.html or landing page after consent & BYOK setup
+      const q = new URLSearchParams(location.search);
+      const prefill = q.get('prefill') || q.get('text');
+      const tryId = q.get('try');
+      if (prefill) {
+        $('message').value = prefill;
         activateTab($('tab-scanner'));
-        runSmartScan($('message').value);
+        await runSmartScan(prefill);
+      } else if (tryId && window.SCAM_TYPES) {
+        const found = window.SCAM_TYPES.find((s) => s.id === tryId);
+        if (found) {
+          $('message').value = found.sample || found.says;
+          activateTab($('tab-scanner'));
+          await runSmartScan($('message').value);
+        }
       }
+    } catch (err) {
+      console.warn('[Chat_Safe][Bootstrap] Initialization error boundary:', err?.message || err);
     }
-  })();
+  }
+
+  bootstrapApp();
 })();
