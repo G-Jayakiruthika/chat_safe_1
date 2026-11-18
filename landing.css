@@ -5,10 +5,11 @@
 .landing-top { background: var(--glass); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
 .landing-top .logo { font-size: 1.35rem; }
 
-/* HUD rail */
+/* HUD rail (horizontal, upright — never rotated or vertical-rl) */
 .hud-rail {
-  position: fixed; left: clamp(.5rem, 2vw, 1.5rem); top: 50%; z-index: 4; transform: translateY(-50%) rotate(180deg);
-  writing-mode: vertical-rl; display: flex; gap: 1.2rem; color: var(--muted); font-size: .7rem; pointer-events: none;
+  position: fixed; left: clamp(.75rem, 2vw, 1.5rem); bottom: 1.1rem; z-index: 4;
+  writing-mode: horizontal-tb; transform: none;
+  display: flex; flex-wrap: wrap; align-items: center; gap: .65rem 1rem; color: var(--muted); font-size: .7rem; pointer-events: none;
 }
 .hud-rail .ruler { letter-spacing: .3em; color: var(--accent); }
 .hud-progress {
@@ -96,10 +97,10 @@
 /* CTA phones */
 .cta { align-items: center; text-align: center; }
 .phones { display: flex; justify-content: center; align-items: flex-end; gap: 1rem; margin: 1rem 0 2rem; flex-wrap: wrap; }
-.phone { width: 170px; height: 300px; border-radius: 28px; border: 2px solid var(--border); background: var(--bg2); padding: 12px; box-shadow: var(--shadow); animation: float 7s ease-in-out infinite; }
-.phone.tall { height: 340px; animation-delay: -3s; }
-.screen { height: 100%; border-radius: 18px; background: var(--bg); display: flex; flex-direction: column; justify-content: flex-end; gap: .4rem; padding: .6rem; text-align: start; }
-.bubble { font-size: .72rem; padding: .4rem .55rem; border-radius: 10px; background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.phone { width: 170px; min-height: 300px; height: auto; border-radius: 28px; border: 2px solid var(--border); background: var(--bg2); padding: 12px; box-shadow: var(--shadow); animation: float 7s ease-in-out infinite; }
+.phone.tall { min-height: 340px; height: auto; animation-delay: -3s; }
+.screen { min-height: 100%; border-radius: 18px; background: var(--bg); display: flex; flex-direction: column; justify-content: flex-end; gap: .4rem; padding: .6rem; text-align: start; }
+.bubble { font-size: .72rem; padding: .4rem .55rem; border-radius: 10px; background: color-mix(in srgb, var(--accent) 16%, transparent); overflow-wrap: break-word; word-break: break-word; }
 .bubble.you { align-self: flex-end; }
 .bubble.bad { background: rgb(248 113 113 / .2); color: var(--critical); }
 .bubble.ok { background: color-mix(in srgb, var(--accent2) 20%, transparent); color: var(--safe); }
@@ -128,18 +129,17 @@
 }
 .step-rail { grid-area: rail; list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
 .step-pill {
-  min-height: 44px; width: 44px; padding: 0; border-radius: 999px; border: 1px solid var(--border);
+  min-height: 44px; min-width: 44px; width: auto; padding: 0 .65rem; border-radius: 999px; border: 1px solid var(--border);
   background: var(--glass); color: var(--muted); font: 700 .78rem ui-monospace, Consolas, monospace;
-  letter-spacing: .08em; overflow: hidden; white-space: nowrap; transition: width .45s cubic-bezier(.2,.8,.2,1), background .3s, color .3s;
+  letter-spacing: .08em; white-space: nowrap; transition: width .45s cubic-bezier(.2,.8,.2,1), background .3s, color .3s;
 }
-.step-pill[aria-current="true"] { width: 108px; background: var(--ink); color: var(--bg); border-color: transparent; }
+.step-pill[aria-current="true"] { min-width: 108px; width: auto; padding-inline: .9rem; background: var(--ink); color: var(--bg); border-color: transparent; }
 
 .demo-stage-visual { grid-area: visual; position: relative; display: grid; place-items: center; min-height: 420px; }
 .phone-3d {
-  width: 215px; height: 420px; border-radius: 34px; padding: 11px;
+  width: 215px; min-height: 420px; height: auto; border-radius: 34px; padding: 11px;
   background: linear-gradient(160deg, #23303f, #0d1521); border: 1px solid var(--border);
   box-shadow: 0 30px 70px rgb(0 0 0 / .55), inset 0 1px 0 rgb(255 255 255 / .12);
-  transform: perspective(1200px) rotateY(-13deg) rotateX(4deg);
 }
 .phone-screen { position: relative; height: 100%; border-radius: 24px; background: #070b14; overflow: hidden; }
 .ps {
