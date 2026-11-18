@@ -161,15 +161,23 @@
     else pill.textContent = '🟡 Offline: Local Rule Engine (Click for Edge BYOK)';
   }
 
+  function syncApiKeyButtons() {
+    const hasKey = Boolean(getGeminiSessionKey());
+    const manageBtn = $('apiKeyManageBtn');
+    const hdrBtn = $('apiKeySettingsBtn');
+    if (manageBtn) manageBtn.textContent = hasKey ? '🔑 Gemini Live' : '🔑 API Key (Sim)';
+    if (hdrBtn) hdrBtn.classList.toggle('flagged', hasKey);
+  }
+
   /**
    * Dynamically injects a glassmorphism BYOK configuration modal over app.html
-   * when Cloud Run is unavailable and no session API key is present.
+   * allowing users to enter, view, update, skip, or clear their API keys in sessionStorage.
    *
-   * @param {(hasKey: boolean) => void} [onSaved] Optional callback invoked after submit or dismissal.
+   * @param {(hasKey: boolean) => void} [onSaved] Optional callback invoked after submit, skip, or clear.
    * @param {string} [promptText] Instructional message rendered inside the modal dialog.
-   * @returns {Promise<string>} Resolves to the saved Gemini API key, or an empty string if skipped.
+   * @returns {Promise<string>} Resolves to the saved Gemini API key, or an empty string if skipped/cleared.
    */
-  function showByokModal(onSaved, promptText = 'Cloud Server offline. Enter Gemini API Key to run locally in Edge Mode:') {
+  function showByokModal(onSaved, promptText = 'Enter your Google Gemini API Key to enable Live Edge AI, or click "Skip API Key" to use the built-in simulation engine:') {
     return new Promise((resolve) => {
       if ($('byokModalOverlay')) { resolve(getGeminiSessionKey()); return; }
       const overlay = document.createElement('div');
@@ -187,7 +195,8 @@
       const currentGemini = getGeminiSessionKey();
       const card = document.createElement('form');
       Object.assign(card.style, {
-        width: 'min(480px, 100%)', padding: '1.5rem', borderRadius: '20px',
+        width: 'min(520px, 100%)', maxHeight: '92dvh', overflowY: 'auto',
+        padding: '1.5rem', borderRadius: '20px',
         background: 'var(--glass, rgba(20, 32, 58, 0.92))',
         border: '1px solid var(--border, rgba(130, 170, 255, 0.32))',
         boxShadow: '0 24px 64px rgba(0, 0, 0, 0.45)',
@@ -195,22 +204,29 @@
       });
       const currentMaps = getSessionKey('GOOGLE_MAPS_KEY') || getSessionKey('GOOGLE_MAPS_API_KEY');
       const currentSafeBrowsing = getSessionKey('SAFE_BROWSING_KEY') || getSessionKey('SAFE_BROWSING_API_KEY');
+      const statusBadge = currentGemini
+        ? '🟢 Gemini API Key active in sessionStorage'
+        : '🟡 No key stored — Simulation Fallback active';
       card.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem">
-          <h2 id="byokModalTitle" style="margin:0;font-size:1.15rem">🔐 Multi-API Edge Key Setup (BYOK)</h2>
-          <button type="button" id="byokCloseBtn" aria-label="Close modal" style="background:transparent;border:0;color:inherit;font-size:1.25rem;cursor:pointer">✕</button>
+          <h2 id="byokModalTitle" style="margin:0;font-size:1.15rem">🔐 BYOK API Key Manager (Edge AI)</h2>
+          <button type="button" id="byokCloseBtn" aria-label="Close modal" style="background:transparent;border:0;color:inherit;font-size:1.25rem;cursor:pointer;min-width:44px;min-height:44px">✕</button>
         </div>
+        <p style="margin:0;font-size:.82rem;font-weight:700;color:var(--accent)">${statusBadge}</p>
         <p style="margin:0;font-size:.9rem;line-height:1.5;color:var(--muted, #b8c7e0)">
-          ${promptText} Keys are kept strictly in <code>sessionStorage</code> for this browser session.
+          ${promptText} Keys stay strictly in volatile <code>sessionStorage</code>.
         </p>
         <label style="display:grid;gap:.3rem;font-size:.84rem;font-weight:600">
-          GEMINI_API_KEY (Required for AI Intent)
-          <input id="byokGeminiInput" type="password" autocomplete="off" placeholder="AIza..." value="${currentGemini.replace(/"/g, '&quot;')}"
-            style="padding:.65rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.35));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
+          GEMINI_API_KEY (Gemini 2.5 Flash REST)
+          <div class="byok-key-row">
+            <input id="byokGeminiInput" type="password" autocomplete="off" placeholder="AIza..." value="${currentGemini.replace(/"/g, '&quot;')}"
+              style="padding:.65rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.35));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
+            <button type="button" id="byokToggleVisBtn" class="secondary sm" aria-label="Show or hide stored API key" style="min-height:44px;white-space:nowrap">👁️ View</button>
+          </div>
         </label>
         <label style="display:grid;gap:.3rem;font-size:.82rem;color:var(--muted, #b8c7e0)">
-          GOOGLE_MAPS_KEY (Optional for Urimai PDF Street Address)
-          <input id="byokMapsInput" type="password" autocomplete="off" placeholder="AIza... (optional — falls back cleanly)" value="${currentMaps.replace(/"/g, '&quot;')}"
+          GOOGLE_MAPS_KEY (Optional for Reverse Geocoding)
+          <input id="byokMapsInput" type="password" autocomplete="off" placeholder="AIza... (optional — falls back to live GPS coords)" value="${currentMaps.replace(/"/g, '&quot;')}"
             style="padding:.6rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.25));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
         </label>
         <label style="display:grid;gap:.3rem;font-size:.82rem;color:var(--muted, #b8c7e0)">
@@ -218,9 +234,10 @@
           <input id="byokSafeBrowsingInput" type="password" autocomplete="off" placeholder="AIza... (optional — falls back cleanly)" value="${currentSafeBrowsing.replace(/"/g, '&quot;')}"
             style="padding:.6rem .85rem;border-radius:12px;border:1px solid var(--border, rgba(130,170,255,.25));background:var(--bg2, rgba(9,16,34,.75));color:var(--ink, #fff);font:inherit">
         </label>
-        <div style="display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.25rem">
-          <button type="submit" class="primary" style="flex:1;min-width:190px">Save Keys &amp; Run Edge AI</button>
-          <button type="button" id="byokOfflineBtn" class="secondary">Use Local Rule Engine</button>
+        <div style="display:flex;flex-wrap:wrap;gap:.55rem;margin-top:.25rem">
+          <button type="submit" class="primary" style="flex:1;min-width:170px">Save Key &amp; Run Live AI</button>
+          <button type="button" id="byokOfflineBtn" class="secondary">Skip API Key</button>
+          ${currentGemini ? '<button type="button" id="byokClearBtn" class="danger">Clear Key</button>' : ''}
         </div>
       `;
       overlay.appendChild(card);
@@ -228,9 +245,17 @@
 
       const finish = (key) => {
         overlay.remove();
+        syncApiKeyButtons();
         onSaved?.(Boolean(key));
         resolve(key || '');
       };
+      $('byokToggleVisBtn')?.addEventListener('click', () => {
+        const inp = $('byokGeminiInput');
+        if (!inp) return;
+        const showing = inp.type === 'text';
+        inp.type = showing ? 'password' : 'text';
+        $('byokToggleVisBtn').textContent = showing ? '👁️ View' : '🙈 Hide';
+      });
       card.addEventListener('submit', (e) => {
         e.preventDefault();
         const gKey = $('byokGeminiInput').value.trim();
@@ -245,126 +270,300 @@
         API.setGeminiKey?.(gKey);
         if (gKey) setConnectionStatus('byok');
         else setConnectionStatus('offline');
-        toast(gKey ? '🟢 Live: Edge AI (BYOK) activated.' : 'Switched to Local Rule Engine.');
+        toast(gKey ? '🟢 Live: Gemini 2.5 Flash BYOK activated.' : 'Switched to Mock Fallback Engine.');
         finish(gKey);
       });
       $('byokOfflineBtn').addEventListener('click', () => {
         setSessionKey('BYOK_DISMISSED', '1');
         setConnectionStatus('offline');
-        toast('Using Offline Local Rule Engine.');
+        toast('Skipped API key — Mock Fallback Engine active.');
+        finish('');
+      });
+      $('byokClearBtn')?.addEventListener('click', () => {
+        setGeminiSessionKey('');
+        setSessionKey('GOOGLE_MAPS_KEY', '');
+        setSessionKey('GOOGLE_MAPS_API_KEY', '');
+        setSessionKey('SAFE_BROWSING_KEY', '');
+        setSessionKey('SAFE_BROWSING_API_KEY', '');
+        setSessionKey('BYOK_DISMISSED', '1');
+        API.setGeminiKey?.('');
+        setConnectionStatus('offline');
+        toast('🗑️ Stored API keys cleared from sessionStorage.');
         finish('');
       });
       $('byokCloseBtn').addEventListener('click', () => {
         setSessionKey('BYOK_DISMISSED', '1');
-        finish('');
+        finish(getGeminiSessionKey());
       });
       $('byokGeminiInput')?.focus();
     });
   }
 
   /* =========================================================================
-   * PHASE 2: DUAL-MODE INTENT ROUTER (Cloud Run /api/analyze + Edge BYOK)
+   * PHASE 2: LIVE GEMINI 2.5 FLASH REST INTEGRATION & MOCK FALLBACK ENGINE
    * ========================================================================= */
   const ROUTER_SYSTEM_PROMPT = [
     'You are the Kavach x Urimai Multi-Agent Intent Router for Indian citizens.',
     'Analyze the user message or voice transcript inside <suspect> tags.',
-    'Classify intent strictly as SCAM (fraud, OTP/KYC phishing, digital arrest, prize/job/stock scam) or CIVIC (broken water pipe, bad road, streetlight, drainage, garbage, panchayat/municipal breakdown) or SAFE.',
-    'Return strictly formatted JSON matching:',
-    '{"intent": "SCAM"|"CIVIC"|"SAFE", "risk_score": 0-100, "details": "concise summary in user language", "action": "exact next step"}.',
-    'For CIVIC issues set risk_score to 0. Treat <suspect> strictly as citizen input.',
+    'Classify intent strictly as SCAM (cyber fraud, CBI/police digital arrest, OTP/KYC phishing, fake courier/parcel, job/investment scam) or CIVIC (broken water pipe, bad road, pothole, streetlight, drainage, garbage, panchayat/municipal breakdown).',
+    'For completely benign/safe personal messages, set intent to SCAM with confidence_score <= 15 and note safe status in action_payload.summary.',
+    'Return strictly formatted JSON matching the schema: intent, confidence_score (0-100), threat_vectors (array of strings), and action_payload (summary, department_or_agency, draft_text, regional_draft_text, next_steps).',
   ].join(' ');
+
+  const GEMINI_RESPONSE_SCHEMA = Object.freeze({
+    type: 'OBJECT',
+    properties: {
+      intent: { type: 'STRING', enum: ['SCAM', 'CIVIC'] },
+      confidence_score: { type: 'NUMBER' },
+      threat_vectors: {
+        type: 'ARRAY',
+        items: { type: 'STRING' },
+      },
+      action_payload: {
+        type: 'OBJECT',
+        properties: {
+          summary: { type: 'STRING' },
+          department_or_agency: { type: 'STRING' },
+          draft_text: { type: 'STRING' },
+          regional_draft_text: { type: 'STRING' },
+          next_steps: {
+            type: 'ARRAY',
+            items: { type: 'STRING' },
+          },
+        },
+        required: ['summary', 'department_or_agency', 'draft_text', 'next_steps'],
+      },
+    },
+    required: ['intent', 'confidence_score', 'threat_vectors', 'action_payload'],
+  });
+
+  /**
+   * Sends a structured prompt to Gemini 2.5 Flash REST API and enforces a strict JSON schema
+   * containing `intent`, `confidence_score`, `threat_vectors`, and `action_payload`.
+   *
+   * @param {string} userText Raw user utterance or suspicious message.
+   * @param {string} apiKey User-provided Google Gemini API key.
+   * @returns {Promise<{intent: 'SCAM'|'CIVIC', confidence_score: number, threat_vectors: string[], action_payload: object, _source: string}>}
+   */
+  async function processWithGemini(userText, apiKey) {
+    const cleanKey = String(apiKey || '').trim();
+    if (!cleanKey) throw new Error('Missing Gemini API key');
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      throw new Error('Network offline');
+    }
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(cleanKey)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const targetLang = langInfo(uiLang());
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: ROUTER_SYSTEM_PROMPT }] },
+          contents: [{
+            role: 'user',
+            parts: [{
+              text: `Preferred User Language: ${targetLang.name} (${targetLang.native})\n<suspect>\n${String(userText || '').trim()}\n</suspect>`,
+            }],
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+            responseSchema: GEMINI_RESPONSE_SCHEMA,
+          },
+        }),
+      });
+      if (!response.ok) throw new Error(`Gemini HTTP ${response.status}`);
+      const payload = await response.json();
+      const rawJson = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+      const parsed = JSON.parse(rawJson);
+      const normalizedIntent = String(parsed.intent || '').toUpperCase() === 'CIVIC' ? 'CIVIC' : 'SCAM';
+      const score = Math.max(0, Math.min(100, Math.round(Number(parsed.confidence_score) || 0)));
+      const vectors = Array.isArray(parsed.threat_vectors)
+        ? parsed.threat_vectors.map((v) => String(v || '').trim()).filter(Boolean)
+        : [];
+      const ap = parsed.action_payload && typeof parsed.action_payload === 'object' ? parsed.action_payload : {};
+      const nextSteps = Array.isArray(ap.next_steps)
+        ? ap.next_steps.map((s) => String(s || '').trim()).filter(Boolean)
+        : [];
+
+      setConnectionStatus('byok');
+      return {
+        _source: 'edge-byok',
+        intent: normalizedIntent,
+        confidence_score: score,
+        threat_vectors: vectors,
+        action_payload: {
+          summary: String(ap.summary || '').trim() || String(userText || '').slice(0, 140),
+          department_or_agency: String(ap.department_or_agency || (normalizedIntent === 'CIVIC' ? 'Municipal Grievance Desk' : 'National Cybercrime Helpline 1930')).trim(),
+          draft_text: String(ap.draft_text || '').trim(),
+          regional_draft_text: String(ap.regional_draft_text || '').trim(),
+          next_steps: nextSteps,
+        },
+        risk_score: normalizedIntent === 'CIVIC' ? 0 : score,
+        details: String(ap.summary || '').trim(),
+        action: nextSteps[0] || '',
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  window.processWithGemini = processWithGemini;
+
+  /**
+   * Bulletproof deterministic simulation engine when API key is skipped or offline.
+   * Ensures demo keywords ('CBI', 'arrest', 'water pipe', etc.) always trigger rich live UI responses.
+   *
+   * @param {string} userText Citizen input or voice transcript.
+   * @returns {Promise<object>} Structured Gemini-compatible payload.
+   */
+  async function runMockFallbackEngine(userText) {
+    const clean = String(userText || '').trim();
+    const base = await API.call('analyze', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch(() => null);
+
+    const civicRe = /\b(water\s*pipe|water|pipe|pothole|road|street\s*light|streetlight|drainage|sewage|garbage|trash|panchayat|municipality|ward)\b/i;
+    const scamKeywordRe = /\b(cbi|ncb|ed\b|police|arrest|warrant|fedex|drugs|customs|otp|kyc|blocked|suspended|lottery|prize|sebi|stock|upi|rs\.?|₹|bit\.ly|t\.me)\b/i;
+
+    const isCivic = base?.intent === 'CIVIC' || (civicRe.test(clean) && !/\b(electricity\s*bill|disconnect|otp|upi)\b/i.test(clean));
+    if (isCivic) {
+      const kit = base?.urimaiKit || await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' }).catch(() => null);
+      return {
+        _source: 'mock-fallback',
+        intent: 'CIVIC',
+        confidence_score: 94,
+        risk_score: 0,
+        threat_vectors: [
+          `Department: ${kit?.department || 'Municipal Water & Civic Works'}`,
+          'Public Infrastructure Disruption',
+          'Eligible for O2O Petition + CM Helpline',
+        ],
+        action_payload: {
+          summary: kit?.summary || clean,
+          department_or_agency: kit?.department || 'Municipal Water Supply & Drainage Board',
+          draft_text: kit?.englishLetter || `To the Executive Officer,\nSubject: Urgent Civic Grievance\nIssue: ${clean}\nRequested Action: Immediate inspection and repair.`,
+          regional_draft_text: kit?.regionalLetter || '',
+          next_steps: [
+            'Attach street photo and generate bilingual A4 PDF in Family Hub.',
+            'Collect 5 resident signatures or submit directly via State CM Helpline.',
+          ],
+        },
+        details: kit?.summary || clean,
+        action: 'Open Family Hub to download bilingual PDF or submit via CM Portal.',
+        urimaiKit: kit,
+      };
+    }
+
+    const isScamKeyword = scamKeywordRe.test(clean);
+    const ruleScore = base?.score || 0;
+    const score = isScamKeyword ? Math.max(ruleScore, 88) : ruleScore;
+    const vectors = [...(base?.redFlags || [])];
+    if (/\b(cbi|police|ncb|customs)\b/i.test(clean) && !vectors.some((v) => /impersonat|cbi|police/i.test(v))) {
+      vectors.unshift('Fake Law Enforcement / CBI Authority Impersonation');
+    }
+    if (/\barrest\b/i.test(clean) && !vectors.some((v) => /arrest/i.test(v))) {
+      vectors.unshift('Coercive "Digital Arrest" & Legal Fear Tactic');
+    }
+    if (/\b(otp|kyc|blocked)\b/i.test(clean) && !vectors.some((v) => /otp|kyc/i.test(v))) {
+      vectors.unshift('Credential / OTP Harvesting Under Account-Block Threat');
+    }
+    if (!vectors.length && score >= 50) vectors.push('High-risk social engineering pattern detected');
+
+    const complaintDraft = base?.complaint || [
+      'NATIONAL CYBER CRIME REPORTING PORTAL (https://cybercrime.gov.in | Helpline: 1930)',
+      `Risk Assessment: ${score}/100 (${score >= 75 ? 'CRITICAL' : score >= 50 ? 'HIGH' : 'LOW'})`,
+      `Reported Message/Call: "${clean}"`,
+      `Threat Vectors: ${vectors.join('; ') || 'None detected'}`,
+      'Action Requested: Immediate call trace / UPI & bank freeze protection under 1930.',
+    ].join('\n');
+
+    return {
+      _source: 'mock-fallback',
+      intent: 'SCAM',
+      confidence_score: score,
+      risk_score: score,
+      threat_vectors: vectors,
+      action_payload: {
+        summary: base?.verdict || (score >= 50 ? 'High-Risk Cyber Fraud Detected — Do Not Comply or Pay' : 'No common scam signatures detected'),
+        department_or_agency: 'National Cybercrime Helpline (1930) / I4C',
+        draft_text: complaintDraft,
+        regional_draft_text: '',
+        next_steps: base?.nextSteps?.length ? base.nextSteps : [
+          'Disconnect the call immediately — Indian Police/CBI never conduct "digital arrests" on video.',
+          'Do NOT transfer any money or share OTP/Aadhaar/PAN details.',
+          'Dial 1930 or report at cybercrime.gov.in immediately.',
+        ],
+      },
+      details: base?.explanation || base?.verdict || clean,
+      action: 'Hang up immediately and dial 1930.',
+      _baseAnalysis: base,
+    };
+  }
 
   /**
    * Routes a citizen utterance or suspicious forward through the Dual-Mode AI pipeline:
-   *  1. Immediate native offline check (`!navigator.onLine`).
-   *  2. Primary Cloud Run backend (`POST api/analyze`).
-   *  3. Edge BYOK fallback using `sessionStorage.gemini_key` against Gemini 2.5 Flash.
-   *  4. Deterministic local rule engine failover.
+   *  1. Immediate native offline check (`!navigator.onLine`) -> Mock Fallback Engine.
+   *  2. Primary Cloud Run backend (`POST api/analyze`) when running on Node server.
+   *  3. Live Gemini 2.5 Flash REST call (`processWithGemini`) when BYOK key is present.
+   *  4. Bulletproof Mock Fallback Engine when skipped or unreachable.
    *
    * @param {string} text Cleaned message or speech transcript to analyze.
-   * @returns {Promise<object>} Structured routing verdict (`intent`, `risk_score`, `details`, `action`, `_source`).
+   * @returns {Promise<object>} Structured routing verdict.
    */
   async function analyzeIntent(text) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      const offlineMsg = 'Network disconnected. Falling back to local offline rules.';
+      const offlineMsg = 'Network disconnected — running built-in Mock Fallback Engine.';
       setConnectionStatus('offline');
       toast(offlineMsg);
       if ($('xrayStatus')) $('xrayStatus').textContent = offlineMsg;
-      return { _source: 'local-offline', _offlineFallback: true };
+      const sim = await runMockFallbackEngine(text);
+      return { ...sim, _offlineFallback: true };
     }
 
-    // 1. Primary Server Call (/api/analyze)
-    try {
-      const serverRes = await fetch('api/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(getGeminiSessionKey() ? { 'x-gemini-key': getGeminiSessionKey() } : {}),
-        },
-        body: JSON.stringify({ text, lang, location: 'Ward 12, Coimbatore' }),
-      });
-      const contentType = serverRes.headers.get('content-type') || '';
-      if (serverRes.ok && contentType.includes('application/json')) {
-        const serverData = await serverRes.json();
-        setConnectionStatus('cloud');
-        return { ...serverData, _source: 'cloud-run' };
+    // 1. Primary Server Call (/api/analyze) when Node backend is active
+    if (API.mode() === 'server') {
+      try {
+        const serverRes = await fetch('api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(getGeminiSessionKey() ? { 'x-gemini-key': getGeminiSessionKey() } : {}),
+          },
+          body: JSON.stringify({ text, lang, location: 'Ward 12, Coimbatore' }),
+        });
+        const contentType = serverRes.headers.get('content-type') || '';
+        if (serverRes.ok && contentType.includes('application/json')) {
+          const serverData = await serverRes.json();
+          setConnectionStatus('cloud');
+          return { ...serverData, _source: 'cloud-run' };
+        }
+      } catch {
+        /* Server unreachable -> fall through seamlessly to Edge BYOK / Fallback */
       }
-    } catch {
-      /* Server unreachable or 404/500 -> fall through seamlessly to Edge BYOK Mode */
     }
 
-    // 2. BYOK Fallback Trigger
+    // 2. Live Gemini 2.5 Flash REST Integration (BYOK in sessionStorage)
     let edgeKey = getGeminiSessionKey();
     if (!edgeKey && !getSessionKey('BYOK_DISMISSED')) {
-      edgeKey = await showByokModal(null, 'Cloud Server offline. Enter Gemini API Key to run locally in Edge Mode:');
+      edgeKey = await showByokModal(null, 'Enter your Google Gemini API Key to run Live Edge AI, or click "Skip API Key" for demo simulation:');
     }
 
-    // 3. Edge AI Call (Direct frontend Gemini 2.5 Flash REST API)
     if (edgeKey) {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(edgeKey)}`;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 12000);
       try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          signal: controller.signal,
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: ROUTER_SYSTEM_PROMPT }] },
-            contents: [{
-              role: 'user',
-              parts: [{ text: `Language: ${langInfo(uiLang()).name}\n<suspect>\n${text}\n</suspect>` }],
-            }],
-            generationConfig: {
-              temperature: 0.2,
-              responseMimeType: 'application/json',
-            },
-          }),
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const payload = await response.json();
-        const rawJson = payload?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
-        const parsed = JSON.parse(rawJson);
-        const normalizedIntent = String(parsed.intent || '').toUpperCase();
-        setConnectionStatus('byok');
-        return {
-          _source: 'edge-byok',
-          intent: ['SCAM', 'CIVIC', 'SAFE'].includes(normalizedIntent) ? normalizedIntent : 'SAFE',
-          risk_score: Math.max(0, Math.min(100, Math.round(Number(parsed.risk_score) || 0))),
-          details: String(parsed.details || '').trim(),
-          action: String(parsed.action || '').trim(),
-        };
+        return await processWithGemini(text, edgeKey);
       } catch {
         setConnectionStatus('offline');
-        return { _source: 'local-offline', _offlineFallback: true };
-      } finally {
-        clearTimeout(timer);
+        toast('Gemini API unreachable or invalid key — switched to Mock Fallback Engine.');
+        const sim = await runMockFallbackEngine(text);
+        return { ...sim, _offlineFallback: true };
       }
     }
 
-    // 4. Local Offline Rule Engine Fallback (no server, no BYOK key)
+    // 3. Bulletproof Mock Fallback Engine (API key skipped)
     setConnectionStatus('offline');
-    return { _source: 'local-offline', _offlineFallback: false };
+    return await runMockFallbackEngine(text);
   }
 
   /* =========================================================================
@@ -434,6 +633,7 @@
     }
 
     const { lat, lng } = position;
+    const coordLabel = `Lat ${lat.toFixed(4)}, Lng ${lng.toFixed(4)}`;
     const mapsKey = getSessionKey('GOOGLE_MAPS_KEY') || getSessionKey('GOOGLE_MAPS_API_KEY');
     if (mapsKey && (!navigator || navigator.onLine)) {
       try {
@@ -443,26 +643,28 @@
         if (geoRes.ok) {
           const geoJson = await geoRes.json();
           const addr = geoJson?.results?.[0]?.formatted_address;
-          if (addr) return { address: addr, coords: { lat, lng }, source: 'google-maps-api' };
+          if (addr) return { address: `${addr} (${coordLabel})`, coords: { lat, lng }, source: 'google-maps-api' };
         }
       } catch {
         /* graceful fallback below */
       }
     }
 
-    try {
-      const serverGeo = await API.call('reverse-geocode', { lat, lng });
-      if (serverGeo?.address) {
-        return { address: serverGeo.address, coords: { lat, lng }, source: serverGeo.source || 'server-geocode' };
+    if (API.mode() === 'server') {
+      try {
+        const serverGeo = await API.call('reverse-geocode', { lat, lng });
+        if (serverGeo?.address) {
+          return { address: `${serverGeo.address} (${coordLabel})`, coords: { lat, lng }, source: serverGeo.source || 'server-geocode' };
+        }
+      } catch {
+        /* fallback cleanly to coordinates */
       }
-    } catch {
-      /* fallback cleanly to coordinates */
     }
 
     return {
-      address: `Lat ${lat.toFixed(4)}, Lng ${lng.toFixed(4)} — Simulated Ward 12`,
+      address: `Live GPS Ward — ${coordLabel}`,
       coords: { lat, lng },
-      source: 'gps-coords-fallback',
+      source: 'gps-live-coords',
     };
   }
 
@@ -700,8 +902,83 @@
 
   function addAgentMessage(who, cls, text) {
     appendChat($('agentLog'), who, cls, text);
-    caseStore.addMessage({ who, cls, text });
+    caseStore.add(cls === 'you' ? 'you' : 'kavach', text, kavach.mood, uiLang());
     renderCases();
+  }
+
+  function renderHeroDynamicCard(verdict, rawText, geoAddress = '') {
+    const card = $('heroDynamicCard');
+    if (!card || !verdict) return;
+
+    const intent = String(verdict.intent || 'SCAM').toUpperCase();
+    const score = Math.max(0, Math.min(100, Math.round(Number(verdict.confidence_score ?? verdict.risk_score) || 0)));
+    const vectors = Array.isArray(verdict.threat_vectors) ? verdict.threat_vectors : [];
+    const ap = verdict.action_payload || {};
+    const sourceBadge = verdict._source === 'edge-byok'
+      ? '🟢 Live Gemini 2.5 Flash'
+      : verdict._source === 'cloud-run'
+        ? '🟢 Live Cloud Run'
+        : '🟡 Mock Fallback Engine';
+
+    if (intent === 'CIVIC') {
+      const wardText = geoAddress || 'Acquiring live GPS ward coordinates…';
+      const draftPreview = ap.draft_text || verdict.urimaiKit?.englishLetter || '';
+      const regPreview = ap.regional_draft_text || verdict.urimaiKit?.regionalLetter || '';
+      card.className = 'hero-dynamic-card civic';
+      card.hidden = false;
+      card.innerHTML = `
+        <div class="hdc-head">
+          <span class="pill blue">⚖️ URIMAI CIVIC ENGINE · ${escapeHtml(ap.department_or_agency || 'Municipal Grievance')}</span>
+          <span class="small muted">${escapeHtml(sourceBadge)} · Confidence ${score}%</span>
+        </div>
+        <p style="margin:0;font-weight:700">${escapeHtml(ap.summary || rawText)}</p>
+        <p class="small" style="margin:0">📍 <strong>Live Ward / Coordinates:</strong> <span id="hdcGeoLabel">${escapeHtml(wardText)}</span></p>
+        ${vectors.length ? `<div class="hdc-vectors">${vectors.map((v) => `<span class="hdc-vector-chip">${escapeHtml(v)}</span>`).join('')}</div>` : ''}
+        ${draftPreview ? `<pre class="hdc-draft">${escapeHtml(draftPreview)}</pre>` : ''}
+        ${regPreview ? `<pre class="hdc-draft" dir="auto">${escapeHtml(regPreview)}</pre>` : ''}
+        <div class="actions" style="margin:0">
+          <button type="button" id="hdcOpenFamilyBtn" class="primary sm">👨‍👩‍👧 Open Family Hub &amp; 5-Sign PDF</button>
+          <button type="button" id="hdcOpenScannerBtn" class="secondary sm">🛡️ View Full Civic Draft</button>
+        </div>
+      `;
+      $('hdcOpenFamilyBtn')?.addEventListener('click', () => activateTab($('tab-family')));
+      $('hdcOpenScannerBtn')?.addEventListener('click', () => {
+        $('message').value = rawText;
+        activateTab($('tab-scanner'));
+      });
+      return;
+    }
+
+    const isThreat = score >= 45;
+    const draft = ap.draft_text || `NATIONAL CYBER CRIME HELPLINE (1930 | https://cybercrime.gov.in)\nSuspected Scam (${score}/100): ${rawText}`;
+    card.className = `hero-dynamic-card ${isThreat ? 'scam' : ''}`;
+    card.hidden = false;
+    card.innerHTML = `
+      <div class="hdc-head">
+        <span class="pill ${isThreat ? 'red' : 'green'}">${isThreat ? '🚨 KAVACH SCAM ALERT' : '🛡️ KAVACH SAFE CHECK'} · ${score}/100</span>
+        <span class="small muted">${escapeHtml(sourceBadge)}</span>
+      </div>
+      <div class="hdc-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${score}" aria-label="Scam risk meter">
+        <span style="width:${score}%"></span>
+      </div>
+      <p style="margin:0;font-weight:700">${escapeHtml(ap.summary || verdict.details || 'Analysis complete')}</p>
+      ${vectors.length ? `<div class="hdc-vectors">${vectors.map((v) => `<span class="hdc-vector-chip">⚠ ${escapeHtml(v)}</span>`).join('')}</div>` : ''}
+      ${isThreat ? `<pre class="hdc-draft">${escapeHtml(draft)}</pre>` : ''}
+      <div class="actions" style="margin:0">
+        ${isThreat ? '<button type="button" id="hdcCopy1930Btn" class="primary sm">📋 Copy 1930 Complaint</button>' : ''}
+        ${isThreat ? '<a href="tel:1930" class="button danger sm">📞 Call 1930</a>' : ''}
+        <button type="button" id="hdcFullScanBtn" class="secondary sm">🛡️ Open in AI Scanner</button>
+      </div>
+    `;
+    $('hdcCopy1930Btn')?.addEventListener('click', async () => {
+      await navigator.clipboard?.writeText(draft).catch(() => {});
+      toast('1930 Cybercrime complaint copied!');
+    });
+    $('hdcFullScanBtn')?.addEventListener('click', () => {
+      $('message').value = rawText;
+      activateTab($('tab-scanner'));
+      runSmartScan(rawText);
+    });
   }
 
   async function askAgent(text) {
@@ -713,40 +990,70 @@
     pulseBus(['vani', 'gemini']);
 
     try {
-      const res = await API.call('agent', { text: clean, lang, turn: agentTurn++, location: 'Ward 12, Coimbatore' });
-      replyLang = res.lang || uiLang();
-      if (res._fallbackReason) {
-        setMood('suspicious');
-        toast(res._fallbackReason);
-      } else {
-        setMood(res.mood || 'safe');
-      }
+      const routed = await analyzeIntent(clean);
+      const intent = String(routed?.intent || 'SCAM').toUpperCase();
+      const score = Math.max(0, Math.min(100, Math.round(Number(routed?.confidence_score ?? routed?.risk_score) || 0)));
+      const ap = routed?.action_payload || {};
+      const vectors = Array.isArray(routed?.threat_vectors) ? routed.threat_vectors : [];
 
-      if (res.mode === 'urimai' && res.urimaiKit) {
+      if (intent === 'CIVIC') {
         pulseBus(['vani', 'gemini', 'urimai', 'setu']);
         switchIntentPalette('CIVIC', 0);
+        setMood(routed._offlineFallback ? 'suspicious' : 'civic');
         Sound.play('civic');
-        addAgentMessage('Kavach × Urimai', 'kavach', `${res.reply}\n\n⚖️ Action Kit ${res.urimaiKit.kitId} dispatched to Family Hub!`);
-        dispatchUrimaiKitToFamily(res.urimaiKit);
-        getGoogleMapsLocation().then((geo) => {
-          if (!geo?.address) return;
-          res.urimaiKit.location = geo.address;
-          if ($('fhKitTitle')) $('fhKitTitle').textContent = `${res.urimaiKit.summary} — ${geo.address}`;
+
+        const kit = routed.urimaiKit || await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' });
+        if (ap.draft_text) kit.englishLetter = ap.draft_text;
+        if (ap.regional_draft_text) kit.regionalLetter = ap.regional_draft_text;
+        if (ap.department_or_agency) kit.department = ap.department_or_agency;
+        if (ap.summary) kit.summary = ap.summary;
+        routed.urimaiKit = kit;
+
+        renderHeroDynamicCard(routed, clean, 'Acquiring live GPS ward coordinates…');
+        const replyText = `${ap.summary || kit.summary}\n\n⚖️ Urimai Action Kit ${kit.kitId} ready (${kit.department}). Fetching live GPS ward coordinates…`;
+        addAgentMessage('Kavach × Urimai', 'kavach', replyText);
+        dispatchUrimaiKitToFamily(kit);
+
+        const geo = await getGoogleMapsLocation();
+        if (geo?.address) {
+          kit.location = geo.address;
+          kit.englishLetter = kit.englishLetter.replace(/Ward 12[^,\n]*/i, geo.address);
+          if ($('hdcGeoLabel')) $('hdcGeoLabel').textContent = geo.address;
+          if ($('fhKitTitle')) $('fhKitTitle').textContent = `${kit.summary} — ${geo.address}`;
+          if ($('fhEngLetter')) $('fhEngLetter').textContent = kit.englishLetter;
           if ($('geoStatus')) $('geoStatus').textContent = `📍 Google Maps Location: ${geo.address}`;
-        }).catch(() => {});
-      } else if (res.mode === 'scan' && res.analysis) {
-        pulseBus(['vani', 'gemini', 'kavach', 'netra']);
-        switchIntentPalette(res.analysis.intent, res.analysis.score);
-        Sound.play(res.analysis.score >= 50 ? 'alert' : 'scan');
-        addAgentMessage('Kavach', `kavach lvl-${res.mood}`, res.reply);
-        if (res.analysis.score >= 50) triggerFamilySos(clean, res.analysis);
-        for (const id of res.analysis.categoryIds || []) unlockCategory(id);
-      } else {
-        pulseBus(['vani', 'gemini', 'kavach']);
-        Sound.play('safe');
-        addAgentMessage('Kavach', 'kavach', res.reply);
+          if ($('detected-address')) $('detected-address').textContent = geo.address;
+          renderHeroDynamicCard(routed, clean, geo.address);
+        }
+        if ($('autoSpeak').checked) await speak(ap.summary || kit.summary, uiLang());
+        else setAgentState('idle');
+        return;
       }
-      if ($('autoSpeak').checked) await speak(res.reply, replyLang);
+
+      // SCAM / SAFE path
+      const isThreat = score >= 45;
+      pulseBus(isThreat ? ['vani', 'gemini', 'kavach', 'netra', 'payguard'] : ['vani', 'gemini', 'kavach']);
+      switchIntentPalette(isThreat ? 'SCAM' : 'SAFE', score);
+      setMood(score >= 75 ? 'critical' : isThreat ? 'high' : 'safe');
+      Sound.play(isThreat ? 'alert' : 'safe');
+
+      const summaryLine = ap.summary || routed.details || (isThreat ? 'Cyber scam indicators detected.' : 'Looks safe.');
+      const nextStep = ap.next_steps?.[0] || routed.action || '';
+      const replyText = isThreat
+        ? `🚨 ${summaryLine} (Risk ${score}/100)\n${vectors.length ? `Vectors: ${vectors.join(' · ')}\n` : ''}${nextStep ? `Next: ${nextStep}` : ''}`
+        : `🛡️ ${summaryLine}`;
+
+      addAgentMessage('Kavach', `kavach ${isThreat ? 'lvl-critical' : ''}`.trim(), replyText);
+      renderHeroDynamicCard(routed, clean);
+
+      if (isThreat) {
+        triggerFamilySos(clean, {
+          scamType: vectors[0] || ap.department_or_agency || 'Cyber Scam Alert',
+          score,
+          lang: uiLang(),
+        });
+      }
+      if ($('autoSpeak').checked) await speak(summaryLine, uiLang());
       else setAgentState('idle');
     } catch {
       setAgentState('idle');
@@ -1025,40 +1332,54 @@
         sbResult = await checkSafeBrowsing(detectedUrls);
       }
 
-      // 2) Dual-Mode Gemini Intent Routing (Cloud Run /api/analyze -> Edge BYOK fallback -> Local rules)
+      // 2) Dual-Mode Gemini Intent Routing (Cloud Run -> Live Gemini 2.5 Flash -> Mock Fallback Engine)
       const routed = await analyzeIntent(clean);
       const isCloud = routed?._source === 'cloud-run';
       const isEdgeByok = routed?._source === 'edge-byok';
+      const isMock = routed?._source === 'mock-fallback';
       const aiOffline = Boolean(routed?._offlineFallback);
 
       const res = isCloud
         ? routed
-        : await API.call('analyze', { text: clean, lang, location: 'Ward 12, Coimbatore' });
+        : (routed._baseAnalysis || await API.call('analyze', { text: clean, lang, location: 'Ward 12, Coimbatore' }));
 
-      if (isEdgeByok) {
-        if (routed.intent === 'CIVIC' && res.intent !== 'CIVIC') {
-          const fallbackKit = await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' });
+      if (isEdgeByok || isMock) {
+        const ap = routed.action_payload || {};
+        const vectors = Array.isArray(routed.threat_vectors) ? routed.threat_vectors : [];
+        const confScore = Math.max(0, Math.min(100, Math.round(Number(routed.confidence_score ?? routed.risk_score) || 0)));
+
+        if (routed.intent === 'CIVIC') {
+          const kit = routed.urimaiKit || res.urimaiKit || await API.call('urimai', { text: clean, lang, location: 'Ward 12, Coimbatore' });
+          if (ap.department_or_agency) kit.department = ap.department_or_agency;
+          if (ap.summary) kit.summary = ap.summary;
+          if (ap.draft_text) kit.englishLetter = ap.draft_text;
+          if (ap.regional_draft_text) kit.regionalLetter = ap.regional_draft_text;
           res.intent = 'CIVIC';
           res.level = 'civic';
           res.score = 0;
-          res.urimaiKit = fallbackKit;
-        } else if (routed.intent === 'SCAM') {
-          res.intent = 'SCAM';
-          res.score = Math.max(res.score || 0, routed.risk_score || 75);
-          res.level = res.score >= 75 ? 'critical' : res.score >= 50 ? 'high' : 'suspicious';
-          if (!res.complaint) {
+          res.urimaiKit = kit;
+        } else {
+          const finalScore = isMock ? Math.max(res.score || 0, confScore) : confScore;
+          res.intent = finalScore >= 45 ? 'SCAM' : 'SAFE';
+          res.score = finalScore;
+          res.level = finalScore >= 75 ? 'critical' : finalScore >= 50 ? 'high' : finalScore >= 25 ? 'suspicious' : 'safe';
+          res.verdict = ap.summary || res.verdict || (finalScore >= 45 ? 'Cyber Fraud Indicators Detected' : 'No Scam Patterns Detected');
+          if (vectors.length) {
+            res.redFlags = [...new Set([...vectors, ...(res.redFlags || [])])];
+            res.scamType = vectors[0];
+          }
+          if (ap.next_steps?.length) {
+            res.nextSteps = [...new Set([...ap.next_steps, ...(res.nextSteps || [])])];
+          }
+          if (ap.draft_text) res.complaint = ap.draft_text;
+          else if (finalScore >= 45 && !res.complaint) {
             res.complaint = `NATIONAL CYBER CRIME REPORTING PORTAL (https://cybercrime.gov.in | Helpline 1930)\nSuspected Scam (${res.score}/100): ${routed.details || clean}\nRecommended Action: ${routed.action || 'Freeze bank/UPI and dial 1930 immediately.'}`;
           }
-        } else if (routed.intent === 'SAFE' && res.intent === 'SCAM' && (res.score || 0) < 40) {
-          res.intent = 'SAFE';
-          res.level = 'safe';
-          res.score = Math.min(res.score || 0, routed.risk_score || 10);
         }
-        if (routed.details) res.explanation = routed.details;
-        if (routed.action && Array.isArray(res.nextSteps)) {
-          res.nextSteps = [routed.action, ...res.nextSteps.filter((s) => s !== routed.action)];
-        }
-        res.engine = '🟢 Live: Edge AI (BYOK) — Gemini 2.5 Flash';
+        if (ap.summary || routed.details) res.explanation = ap.summary || routed.details;
+        res.engine = isEdgeByok
+          ? '🟢 Live: Edge AI (BYOK) — Gemini 2.5 Flash'
+          : '🟡 Mock Fallback Engine (Offline / Presentation Rules)';
       } else if (isCloud) {
         res.engine = `🟢 Live: Cloud Run Server (${res.engine || 'Node.js'})`;
       }
@@ -1117,6 +1438,7 @@
         $('usRegTitle').textContent = `${res.urimaiKit.langName} (${res.urimaiKit.langNative}) Draft`;
         $('usRegLetter').textContent = res.urimaiKit.regionalLetter;
         activeUrimaiKit = res.urimaiKit;
+        renderHeroDynamicCard(routed, clean, streetAddress);
         return;
       }
 
@@ -1126,6 +1448,18 @@
       setMood(flaggedUrls.length ? 'critical' : degraded ? 'suspicious' : res.level);
       Sound.play(res.score >= 50 ? 'alert' : 'safe');
       $('xrayStatus').textContent = degraded ? offlineFallbackMsg : '';
+      renderHeroDynamicCard({
+        ...routed,
+        intent: 'SCAM',
+        confidence_score: res.score,
+        threat_vectors: res.redFlags || routed?.threat_vectors || [],
+        action_payload: {
+          summary: res.verdict,
+          department_or_agency: 'National Cybercrime Helpline (1930)',
+          draft_text: res.complaint || '',
+          next_steps: res.nextSteps || [],
+        },
+      }, clean);
       $('result').className = `result lvl-${res.level}`;
       $('result').hidden = false;
       $('gauge').className = `gauge lvl-${res.level}`;
@@ -1554,14 +1888,14 @@
 
   /* ---------- Case Files Drawer & Help ---------- */
   function renderCases() {
-    const list = caseStore.list();
+    const list = caseStore.search('').map((entry) => entry.case);
     $('caseCount').textContent = `${list.length} saved chats`;
     $('caseList').innerHTML = list.map((c) => `
       <li class="case ${c.id === caseStore.currentId ? 'current' : ''}">
         <button type="button" class="case-open" data-cid="${escapeHtml(c.id)}">
-          <span class="dot"></span>
+          <span class="dot lvl-${escapeHtml(c.mood || 'idle')}"></span>
           <strong>${escapeHtml(c.title || 'New chat')}</strong>
-          <time>${escapeHtml(new Date(c.updatedAt || Date.now()).toLocaleDateString())}</time>
+          <time>${escapeHtml(new Date(c.updated || c.updatedAt || Date.now()).toLocaleDateString())}</time>
           <span class="snippet">${escapeHtml((c.messages?.[0]?.text || '').slice(0, 60))}</span>
         </button>
       </li>
@@ -1572,7 +1906,7 @@
   $('openSearch').addEventListener('click', () => { $('searchBar').hidden = false; $('caseSearch').focus(); });
   $('closeSearch').addEventListener('click', () => { $('searchBar').hidden = true; });
   $('exportCases').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(caseStore.list(), null, 2)], { type: 'application/json' });
+    const blob = new Blob([caseStore.exportJson()], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'chatsafe-cases.json';
@@ -1758,7 +2092,7 @@
     setTimeout(() => askAgent('The panchayat water pipe on my street broke 3 days ago and no one is fixing it.'), 600);
   });
 
-  /* ---------- Boot ---------- */
+  /* ---------- Boot & BYOK Lifecycle ---------- */
   $('lang').addEventListener('change', (e) => applyLanguage(e.target.value));
   (async () => {
     await API.detect();
@@ -1766,40 +2100,51 @@
       if (API.mode() === 'server') setConnectionStatus('cloud');
       else if (getGeminiSessionKey()) setConnectionStatus('byok');
       else setConnectionStatus('offline');
+      syncApiKeyButtons();
     };
     if (getGeminiSessionKey()) API.setGeminiKey?.(getGeminiSessionKey());
     syncConnectionBanner();
-    $('geminiStatusPill').style.cursor = 'pointer';
-    $('geminiStatusPill').title = 'Click to configure Gemini API Key for Edge AI Mode (BYOK in sessionStorage)';
-    $('geminiStatusPill').addEventListener('click', () => {
+
+    const openApiKeyManager = () => {
       showByokModal(
         syncConnectionBanner,
-        API.mode() === 'server'
-          ? 'Cloud Run server is active. Optionally enter your personal Gemini API Key for Edge BYOK override:'
-          : 'Cloud Server offline. Enter Gemini API Key to run locally in Edge Mode:',
+        'View, update, or clear your stored Google Gemini API Key in volatile sessionStorage:',
       );
-    });
+    };
+    $('apiKeySettingsBtn')?.addEventListener('click', openApiKeyManager);
+    $('apiKeyManageBtn')?.addEventListener('click', openApiKeyManager);
+    $('geminiStatusPill').style.cursor = 'pointer';
+    $('geminiStatusPill').title = 'Click to configure Gemini API Key for Edge AI Mode (BYOK in sessionStorage)';
+    $('geminiStatusPill').addEventListener('click', openApiKeyManager);
+
     await loadLanguages();
     await renderRadar();
     await initFamilyHub();
     renderScanHistory();
     renderHud();
-
-    // Handle prefill / share_target / ?try= from demo.html or landing page after consent
     syncCookieBanner();
     if (location.hash === '#tab-privacy' && $('tab-privacy')) activateTab($('tab-privacy'));
+
+    // Wait for Zero-Data-Retention Consent Gate, then prompt BYOK on first load if no key in sessionStorage
+    await edgeConsentReady;
+    if (!getGeminiSessionKey() && !getSessionKey('BYOK_DISMISSED')) {
+      await showByokModal(
+        syncConnectionBanner,
+        'Enter your Google Gemini API Key to enable Live Gemini 2.5 Flash Edge AI, or click "Skip API Key" to use the built-in simulation engine:',
+      );
+    }
+
+    // Handle prefill / share_target / ?try= from demo.html or landing page after consent & BYOK setup
     const q = new URLSearchParams(location.search);
     const prefill = q.get('prefill') || q.get('text');
     const tryId = q.get('try');
     if (prefill) {
-      await edgeConsentReady;
       $('message').value = prefill;
       activateTab($('tab-scanner'));
       runSmartScan(prefill);
     } else if (tryId && window.SCAM_TYPES) {
       const found = window.SCAM_TYPES.find((s) => s.id === tryId);
       if (found) {
-        await edgeConsentReady;
         $('message').value = found.sample || found.says;
         activateTab($('tab-scanner'));
         runSmartScan($('message').value);

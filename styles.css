@@ -1040,6 +1040,84 @@ body.consent-locked > footer {
 }
 
 /* ============================================================================
+   Dynamic Hero Verdict Card (Red Scam Card vs. Blue Urimai Civic Card)
+   ============================================================================ */
+.hero-dynamic-card {
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  border: 1.5px solid var(--border);
+  background: var(--bg2);
+  display: grid;
+  gap: .7rem;
+  animation: rise .35s ease both;
+  min-width: 0;
+  max-width: 100%;
+}
+.hero-dynamic-card[hidden] { display: none !important; }
+.hero-dynamic-card.scam {
+  border-color: var(--critical);
+  background: color-mix(in srgb, var(--critical) 11%, var(--bg2));
+  box-shadow: 0 0 28px rgb(248 113 113 / .22);
+}
+.hero-dynamic-card.civic {
+  border-color: #3b82f6;
+  background: color-mix(in srgb, #3b82f6 11%, var(--bg2));
+  box-shadow: 0 0 28px rgb(59 130 246 / .22);
+}
+.hdc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+.hdc-meter {
+  height: 10px;
+  border-radius: 999px;
+  background: rgb(127 127 127 / .2);
+  overflow: hidden;
+}
+.hdc-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--suspicious), var(--critical));
+  transition: width .45s ease;
+}
+.hdc-vectors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+.hdc-vector-chip {
+  padding: .22rem .6rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 700;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.hero-dynamic-card.scam .hdc-vector-chip { color: var(--critical); }
+.hero-dynamic-card.civic .hdc-vector-chip { color: #60a5fa; }
+.hdc-draft {
+  margin: 0;
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: .82rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.byok-key-row {
+  display: flex;
+  gap: .45rem;
+  align-items: center;
+}
+.byok-key-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ============================================================================
    Shared Fluid Grid Helpers & Overflow Prevention
    ============================================================================ */
 .chat-column { display: grid; gap: .55rem; min-width: 0; }

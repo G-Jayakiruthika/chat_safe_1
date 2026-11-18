@@ -92,6 +92,7 @@
           <button type="button" data-mode="system">↖ System default</button>
         </div>
       </div>
+      <button type="button" id="apiKeySettingsBtn" class="icon-btn" aria-label="API Key Settings (View, Update, or Clear)" data-tip="API Key Settings (BYOK)">🔑</button>
       <button type="button" id="helpBtn" class="icon-btn" aria-label="Keyboard shortcuts" data-tip="Shortcuts (?)">⌨️</button>
     </div>
   </header>
@@ -119,6 +120,7 @@
         <div class="panel-head">
           <h1 id="agentTitle" data-i18n="agentTitle">Talk to Kavach &amp; Urimai</h1>
           <div class="head-actions">
+            <button type="button" id="apiKeyManageBtn" class="chip" data-tip="View, update, or clear your Gemini API Key">🔑 API Key</button>
             <button type="button" id="newChat" class="chip" data-i18n="newChat">＋ New chat</button>
             <button type="button" id="demoBtn" class="chip demo-chip" data-i18n="demo">▶ Guided demo</button>
           </div>
@@ -179,6 +181,9 @@
           <span class="bus-node" data-bus="netra">🔬 Netra PII</span>
           <span class="bus-node" data-bus="setu">🤝 Setu O2O</span>
         </div>
+
+        <!-- Dynamic Red Scam / Blue Urimai Civic Verdict Card -->
+        <section id="heroDynamicCard" class="hero-dynamic-card" hidden aria-live="polite"></section>
       </div>
     </section>
 
