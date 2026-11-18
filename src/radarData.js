@@ -205,10 +205,10 @@ const VIDEO_NEWS_REELS = [
     views: '41K views',
     likes: 2890,
     accent: '#2563eb',
-    summary: 'Rural father dialed 9 in Tamil; son received the bilingual PDF + photo prompt in hostel and filed via Mudhalvarin Mugavari & Local Proxy.',
+    summary: 'Village elder dialed 9 on a button phone in Tamil; family received the bilingual petition & photo prompt remotely and filed via Mudhalvarin Mugavari & Local Proxy.',
     scenes: [
-      { badge: 'STEP 1 · VOICE', headline: 'Appa dials 9 on his keypad phone', body: 'Speaks in Tamil: "The street water pipe broke 3 days ago."' },
-      { badge: 'STEP 2 · HANDOFF', headline: 'Son gets Urimai Kit in hostel', body: 'Clicks "Ask Local Proxy" — neighbor snaps photo via WhatsApp link.' },
+      { badge: 'STEP 1 · VOICE', headline: 'Elder dials 9 on a button phone', body: 'Speaks in Tamil: "The street water pipe broke 3 days ago."' },
+      { badge: 'STEP 2 · HANDOFF', headline: 'Family gets Urimai Kit remotely', body: 'Opens from another city on smartphone/laptop or asks a Local Proxy via WhatsApp.' },
       { badge: 'STEP 3 · ACTION', headline: 'Bilingual PDF + CM Helpline', body: 'Submitted on Mudhalvarin Mugavari & local Panchayat. Pipe repaired!' },
     ],
   },

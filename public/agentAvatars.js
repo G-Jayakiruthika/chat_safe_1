@@ -22,7 +22,7 @@
     { id: 'netra', name: 'Netra', role: 'X-Ray & PII Redactor', color: '#f43f5e', badge: '🔬', hat: 'glasses', item: 'lens', line: 'I mask personal names, Aadhaar & phone numbers on Radar with [REDACTED].' },
     { id: 'payguard', name: 'Pay-Guard', role: 'SEBI @valid Checker', color: '#10b981', badge: '💳', hat: 'cap', item: 'coin', line: 'I verify broker UPI handles against SEBI @valid rules in real time.' },
     { id: 'paati', name: 'Kamala Paati', role: 'AI Decoy Grandma', color: '#f59e0b', badge: '👵', hat: 'bun', item: 'cup', line: 'I waste scammers’ time politely about filter coffee & serials — zero real OTPs.' },
-    { id: 'setu', name: 'Setu', role: 'O2O & Proxy Bridge', color: '#06b6d4', badge: '🤝', hat: 'antenna', item: 'bridge', line: 'I send Action Kits to sons in hostels or Local Proxy neighbors via WhatsApp.' },
+    { id: 'setu', name: 'Setu', role: 'O2O & Proxy Bridge', color: '#06b6d4', badge: '🤝', hat: 'antenna', item: 'bridge', line: 'I route Scam & Urimai Action Kits to family smartphones, laptops, or Local Proxy neighbors anywhere.' },
     { id: 'drishti', name: 'Drishti', role: 'Video News & Radar AI', color: '#ec4899', badge: '🎬', hat: 'beret', item: 'cam', line: 'I verify daily scam video reels and track local ward & city threats.' },
   ];
 

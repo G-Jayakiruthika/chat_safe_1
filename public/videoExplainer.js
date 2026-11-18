@@ -278,7 +278,7 @@
         const lt = time - 48;
         const p = seg(lt, 0, 1.2);
         ctx.globalAlpha = p;
-        text('Son in Another City? Two Adaptive Pathways:', 640, 200, 30, C.ink, 800, 'center');
+        text('Family Away from Home? Two Adaptive Pathways:', 640, 200, 30, C.ink, 800, 'center');
         rr(110, 250, 500, 320, 22);
         ctx.fillStyle = 'rgba(59,130,246,0.16)';
         ctx.fill();
@@ -288,7 +288,7 @@
         text('CM Helpline & CPGRAMS', 145, 345, 26, C.ink, 800);
         text('1-click copy formatted text for', 145, 395, 18, C.muted, 500);
         text("TN Mudhalvarin Mugavari / Namma Chennai.", 145, 425, 18, C.muted, 500);
-        text('Submit digitally from hostel in 30s!', 145, 475, 18, C.lime, 700);
+        text('Submit digitally from anywhere in 30s!', 145, 475, 18, C.lime, 700);
 
         rr(670, 250, 500, 320, 22);
         ctx.fillStyle = 'rgba(52,211,153,0.14)';
