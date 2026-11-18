@@ -237,7 +237,7 @@
   .landing-top { flex-wrap: nowrap; }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1239px) {
   .landing-top .mainnav { order: 3; width: 100%; justify-content: flex-start; overflow-x: auto; padding-bottom: .25rem; }
 }
 
