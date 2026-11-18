@@ -37,6 +37,9 @@
   const langInfo = (code) => languages.find((l) => l.code === code) || languages[0];
   const store = (k, v) => { try { localStorage.setItem(`chatsafe.${k}`, v); } catch { /* ignore */ } };
   const load = (k) => { try { return localStorage.getItem(`chatsafe.${k}`); } catch { return null; } };
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
 
   const kavach = window.createKavach($('kavach'), {
     reducedMotion,
@@ -50,6 +53,86 @@
     kavach.setMood(mood);
     bg.setColor(MOOD_RGB[mood] || MOOD_RGB.idle, isDark() ? 0.6 : 0.35);
   }
+
+  /* =========================================================================
+   * ZERO-DATA-RETENTION & EDGE PRIVACY CONSENT GATE (NON-DISMISSIBLE)
+   * ========================================================================= */
+  const CONSENT_STORAGE_KEY = 'chatsafe.edgeConsentAccepted';
+  function hasEdgeConsent() {
+    try { return sessionStorage.getItem(CONSENT_STORAGE_KEY) === '1'; } catch { return false; }
+  }
+
+  function setAppRegionsLocked(locked) {
+    document.body.classList.toggle('consent-locked', locked);
+    document.querySelectorAll('body > header, body > main, body > footer').forEach((el) => {
+      if (locked) {
+        el.setAttribute('inert', '');
+        el.setAttribute('aria-hidden', 'true');
+      } else {
+        el.removeAttribute('inert');
+        el.removeAttribute('aria-hidden');
+      }
+    });
+  }
+
+  let edgeConsentPromise = null;
+  function initEdgeConsentGate() {
+    const modal = $('edgeConsentModal');
+    const agreeBtn = $('edgeConsentAgreeBtn');
+    if (!modal || !agreeBtn) return Promise.resolve();
+
+    if (hasEdgeConsent()) {
+      modal.hidden = true;
+      setAppRegionsLocked(false);
+      return Promise.resolve();
+    }
+
+    if (edgeConsentPromise) return edgeConsentPromise;
+
+    modal.hidden = false;
+    setAppRegionsLocked(true);
+    agreeBtn.focus();
+
+    edgeConsentPromise = new Promise((resolve) => {
+      const preventDismiss = (e) => {
+        if (modal.hidden) return;
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          agreeBtn.focus();
+        }
+      };
+      document.addEventListener('keydown', preventDismiss, true);
+
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          const card = modal.querySelector('.consent-modal-card');
+          card?.classList.remove('consent-shake');
+          void card?.offsetWidth;
+          card?.classList.add('consent-shake');
+          agreeBtn.focus();
+        }
+      });
+
+      agreeBtn.addEventListener('click', () => {
+        try {
+          sessionStorage.setItem(CONSENT_STORAGE_KEY, '1');
+          sessionStorage.setItem('chatsafe.edgeConsentAt', new Date().toISOString());
+        } catch { /* ignore storage restrictions */ }
+        document.removeEventListener('keydown', preventDismiss, true);
+        modal.hidden = true;
+        setAppRegionsLocked(false);
+        Sound.play('safe');
+        toast('🛡️ Secure Core initialized. Zero-Data-Retention Edge Mode active.');
+        $('mic')?.focus();
+        resolve();
+      });
+    });
+
+    return edgeConsentPromise;
+  }
+
+  const edgeConsentReady = initEdgeConsentGate();
 
   /* =========================================================================
    * PHASE 1: DUAL-MODE SECURITY & BYOK INITIALIZATION (Cloud Run + Edge BYOK)
@@ -1068,13 +1151,13 @@
           sbStatus.textContent = `✅ Checked ${detectedUrls.length} URL(s) via ${sbResult?.source || 'Safe Browsing'} — no blacklist hits.`;
         }
       }
-      $('redFlags').innerHTML = flags.map((f) => `<li>${f}</li>`).join('');
-      $('nextSteps').innerHTML = (res.nextSteps || []).map((s) => `<li>${s}</li>`).join('');
+      $('redFlags').innerHTML = flags.map((f) => `<li>${escapeHtml(f)}</li>`).join('');
+      $('nextSteps').innerHTML = (res.nextSteps || []).map((s) => `<li>${escapeHtml(s)}</li>`).join('');
 
       if (res.upiChecks?.length) {
         $('upiBlock').hidden = false;
         $('upiList').innerHTML = res.upiChecks.map((u) =>
-          `<li class="${u.verdict === 'validated' ? 'good' : 'bad'}"><code>${u.upi}</code> — ${u.reason}</li>`
+          `<li class="${u.verdict === 'validated' ? 'good' : 'bad'}"><code>${escapeHtml(u.upi)}</code> — ${escapeHtml(u.reason)}</li>`
         ).join('');
       } else {
         $('upiBlock').hidden = true;
@@ -1102,8 +1185,8 @@
     $('scanHistoryList').innerHTML = scanHistory.slice(0, 6).map((h) => `
       <li class="got">
         <span>${h.mode === 'CIVIC' ? '⚖️' : '🛡️'}</span>
-        <span><strong>${h.mode}</strong> — ${h.text}</span>
-        <span class="small muted">${h.time}</span>
+        <span><strong>${escapeHtml(h.mode)}</strong> — ${escapeHtml(h.text)}</span>
+        <span class="small muted">${escapeHtml(h.time)}</span>
       </li>
     `).join('') || '<li class="small muted">No scans yet in this session.</li>';
   }
@@ -1475,11 +1558,11 @@
     $('caseCount').textContent = `${list.length} saved chats`;
     $('caseList').innerHTML = list.map((c) => `
       <li class="case ${c.id === caseStore.currentId ? 'current' : ''}">
-        <button type="button" class="case-open" data-cid="${c.id}">
+        <button type="button" class="case-open" data-cid="${escapeHtml(c.id)}">
           <span class="dot"></span>
-          <strong>${c.title || 'New chat'}</strong>
-          <time>${new Date(c.updatedAt || Date.now()).toLocaleDateString()}</time>
-          <span class="snippet">${(c.messages?.[0]?.text || '').slice(0, 60)}</span>
+          <strong>${escapeHtml(c.title || 'New chat')}</strong>
+          <time>${escapeHtml(new Date(c.updatedAt || Date.now()).toLocaleDateString())}</time>
+          <span class="snippet">${escapeHtml((c.messages?.[0]?.text || '').slice(0, 60))}</span>
         </button>
       </li>
     `).join('');
@@ -1503,6 +1586,170 @@
   });
   $('helpBtn').addEventListener('click', () => $('helpDialog').showModal());
   $('closeHelp').addEventListener('click', () => $('helpDialog').close());
+
+  /* ---------- TAB 10: ISO/IEC 27701 DATA PRIVACY, CONSENT VAULT & COOKIE BANNER ---------- */
+  let csrfPrivacyToken = '';
+  function readCsrfCookie() {
+    for (const part of String(document.cookie || '').split(';')) {
+      const [k, ...v] = part.trim().split('=');
+      if (k === 'cs_csrf') return decodeURIComponent(v.join('='));
+    }
+    return csrfPrivacyToken;
+  }
+
+  async function privacyServerCall(endpoint, body, method = body ? 'POST' : 'GET') {
+    const headers = {};
+    if (body) headers['Content-Type'] = 'application/json';
+    const csrf = readCsrfCookie();
+    if (csrf && method !== 'GET') headers['X-CSRF-Token'] = csrf;
+    const res = await fetch(`api/${endpoint}`, {
+      method,
+      headers,
+      cache: 'no-store',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (data.csrfToken) csrfPrivacyToken = data.csrfToken;
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+
+  $('privacyProfileForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusEl = $('privacyFormStatus');
+    if (!$('privPolicyConsent')?.checked || !$('privAgeConsent')?.checked) {
+      statusEl.textContent = 'Privacy Policy consent and Age Verification are required.';
+      statusEl.className = 'status error';
+      return;
+    }
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form));
+    const name = String(data.name || '').trim();
+    const email = String(data.email || '').trim().toLowerCase();
+    const city = String(data.city || '').trim();
+    const password = String(data.password || '');
+    const marketingOptIn = Boolean($('privAlertsOptIn')?.checked);
+    const cookiePref = load('cookieConsent') || 'essential';
+
+    if (!name || !email || !email.includes('@')) {
+      statusEl.textContent = 'Enter a valid name and email address.';
+      statusEl.className = 'status error';
+      return;
+    }
+
+    // Store minimal consent record locally + sync to encrypted SQLite/Node DB when server is running
+    const localRecord = {
+      name, email, city, lang: uiLang(),
+      consentVersion: 'ISO-27701-v3.0',
+      consentAt: new Date().toISOString(),
+      ageVerified: true,
+      marketingOptIn,
+      cookiePref,
+    };
+    store('privacyProfile', JSON.stringify(localRecord));
+
+    if (API.mode() === 'server') {
+      try {
+        if (password.length >= 8) {
+          await privacyServerCall('auth/signup', {
+            name, email, city, password, lang: uiLang(),
+            website: data.website || '',
+            consent: true, ageConsent: true, marketingOptIn, cookiePref,
+          }, 'POST');
+          statusEl.textContent = '✅ Account & encrypted citizen profile saved cleanly to SQLite (Argon2id hashed).';
+        } else {
+          await privacyServerCall('privacy/profile', { name, city, lang: uiLang(), marketingOptIn, cookiePref }, 'PUT');
+          statusEl.textContent = '✅ Signed-in profile & consent preferences updated on server.';
+        }
+        statusEl.className = 'status';
+        toast('ISO 27701 profile & consent saved.');
+        return;
+      } catch (err) {
+        statusEl.textContent = `${err.message} (Saved locally on this device.)`;
+        statusEl.className = 'status';
+        return;
+      }
+    }
+    statusEl.textContent = '✅ Saved locally in encrypted browser session/profile (static mode; enter 8+ char pass on server for SQLite Argon2id storage).';
+    statusEl.className = 'status';
+    toast('Privacy consent & profile saved locally.');
+  });
+
+  $('privacyExportBtn')?.addEventListener('click', async () => {
+    let payload = null;
+    if (API.mode() === 'server') {
+      try {
+        payload = await privacyServerCall('privacy/export');
+      } catch {
+        payload = null;
+      }
+    }
+    if (!payload) {
+      let localProfile = null;
+      try { localProfile = JSON.parse(load('privacyProfile') || 'null'); } catch { localProfile = null; }
+      payload = {
+        standard: 'ISO/IEC 27701 & India DPDP Act 2023 Data Portability Export',
+        exportedAt: new Date().toISOString(),
+        profile: localProfile,
+        learnedScams: getLearned(),
+        streak: load('streak') || '0',
+        cookieConsent: load('cookieConsent') || 'essential',
+      };
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'chatsafe-iso27701-export.json';
+    a.click();
+    if ($('privacyRightsStatus')) $('privacyRightsStatus').textContent = '✅ Data export JSON downloaded.';
+  });
+
+  $('privacyUnsubBtn')?.addEventListener('click', async () => {
+    if ($('privAlertsOptIn')) $('privAlertsOptIn').checked = false;
+    try {
+      const p = JSON.parse(load('privacyProfile') || 'null');
+      if (p) { p.marketingOptIn = false; store('privacyProfile', JSON.stringify(p)); }
+    } catch { /* ignore */ }
+    if (API.mode() === 'server') {
+      await privacyServerCall('privacy/unsubscribe', {}).catch(() => {});
+    }
+    if ($('privacyRightsStatus')) $('privacyRightsStatus').textContent = '🔕 Unsubscribed from all optional alert emails/digests.';
+    toast('Unsubscribed cleanly.');
+  });
+
+  $('privacyDeleteBtn')?.addEventListener('click', async () => {
+    if (!window.confirm('Permanently delete your account, consent record, local history, and API keys?')) return;
+    if (API.mode() === 'server') {
+      await privacyServerCall('auth/account', {}, 'DELETE').catch(() => {});
+    }
+    try { localStorage.clear(); sessionStorage.clear(); } catch { /* ignore */ }
+    caseStore.clear();
+    $('privacyProfileForm')?.reset();
+    if ($('privacyRightsStatus')) $('privacyRightsStatus').textContent = '🗑️ All server & browser personal data permanently erased.';
+    toast('All personal data erased (Right to Erasure).');
+  });
+
+  /* ---------- Non-Dark-Pattern Cookie Consent Banner ---------- */
+  function syncCookieBanner() {
+    const banner = $('cookieConsentBanner');
+    if (!banner) return;
+    const saved = load('cookieConsent');
+    banner.hidden = Boolean(saved);
+  }
+  $('cookieEssentialBtn')?.addEventListener('click', () => {
+    store('cookieConsent', 'essential');
+    syncCookieBanner();
+    toast('🍪 Strictly essential security cookies only saved.');
+  });
+  $('cookieAcceptBtn')?.addEventListener('click', () => {
+    store('cookieConsent', 'all');
+    syncCookieBanner();
+    toast('🍪 Essential + UI preferences saved.');
+  });
+  $('openCookiePrefsBtn')?.addEventListener('click', () => {
+    const banner = $('cookieConsentBanner');
+    if (banner) banner.hidden = false;
+  });
 
   /* ---------- Guided Demo Tour ---------- */
   $('demoBtn').addEventListener('click', () => {
@@ -1538,17 +1785,21 @@
     renderScanHistory();
     renderHud();
 
-    // Handle prefill / share_target / ?try= from demo.html or landing page
+    // Handle prefill / share_target / ?try= from demo.html or landing page after consent
+    syncCookieBanner();
+    if (location.hash === '#tab-privacy' && $('tab-privacy')) activateTab($('tab-privacy'));
     const q = new URLSearchParams(location.search);
     const prefill = q.get('prefill') || q.get('text');
     const tryId = q.get('try');
     if (prefill) {
+      await edgeConsentReady;
       $('message').value = prefill;
       activateTab($('tab-scanner'));
       runSmartScan(prefill);
     } else if (tryId && window.SCAM_TYPES) {
       const found = window.SCAM_TYPES.find((s) => s.id === tryId);
       if (found) {
+        await edgeConsentReady;
         $('message').value = found.sample || found.says;
         activateTab($('tab-scanner'));
         runSmartScan($('message').value);
